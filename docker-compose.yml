@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lifedash
+      POSTGRES_PASSWORD: lifedash
+      POSTGRES_DB: lifedash
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifedash"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  receiver:
+    build: ./receiver
+    environment:
+      DATABASE_URL: postgresql://lifedash:lifedash@db:5432/lifedash
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+    ports:
+      - "${RECEIVER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-lifedash}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  grafana-data:

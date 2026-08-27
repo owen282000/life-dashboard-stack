@@ -1,0 +1,14 @@
+apiVersion: 1
+datasources:
+  - name: LifeDashboard Postgres
+    uid: lifedash-postgres
+    type: postgres
+    access: proxy
+    url: db:5432
+    database: lifedash
+    user: lifedash
+    secureJsonData:
+      password: lifedash
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
