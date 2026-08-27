@@ -5,10 +5,10 @@ datasources:
     type: postgres
     access: proxy
     url: db:5432
-    database: lifedash
     user: lifedash
     secureJsonData:
       password: lifedash
     jsonData:
+      database: lifedash
       sslmode: disable
       postgresVersion: 1600
