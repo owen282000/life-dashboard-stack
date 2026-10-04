@@ -1,19 +1,16 @@
 <!DOCTYPE html>
 <!--
   Source for docs/readme-hero-phone.png, the phone version of the README hero
-  (readme-hero.html): three panels of the same dashboard (steps per day, heart rate and
-  screen time per day), stacked so they stay readable on a screen about 400 px wide. The
-  README picks it with <picture> and a max-width media query.
+  (readme-hero.html): the six tiles of the Overview and its steps per day, laid out so they
+  stay readable on a screen about 400 px wide. The README picks it with <picture> and a
+  max-width media query.
 
-  The crops come from docs/screenshots/grafana-narrow.png (2000 x 2000): Grafana in kiosk
-  mode with the dark theme and the last 7 days (from=now-6d/d), taken with headless Chrome at
-  --window-size=1000,1000 --force-device-scale-factor=2, so each panel is half the width of
-  the hero's and its text twice as large. The image is shown at 1895 px wide (scale 0.9476),
-  and each crop starts 2 px inside a panel's border. After a new screenshot, check that the
-  crops still line up with the panels.
+  Every image is one panel, shot on its own (viewPanel) in kiosk mode with Phone demo-android
+  at device scale 2 and cropped to the panel's border: the tiles at 260 x 178 CSS px, the
+  chart at 452 x 306. They live in docs/screenshots/readme/. Render with:
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-      --headless=new --screenshot=docs/readme-hero-phone.png --window-size=1000,1831 \
+      --headless=new --screenshot=docs/readme-hero-phone.png --window-size=1000,1684 \
       --hide-scrollbars --force-device-scale-factor=1 \
       --default-background-color=00000000 docs/brand/readme-hero-phone.html
 -->
@@ -22,7 +19,7 @@
 <meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 1000px; height: 1831px; overflow: hidden; background: transparent; }
+  html, body { width: 1000px; height: 1684px; overflow: hidden; background: transparent; }
   .card {
     position: absolute; inset: 0; border-radius: 40px; overflow: hidden;
     background: radial-gradient(130% 130% at 25% 20%, #171D21 0%, #14181C 45%, #101C1C 100%);
@@ -34,26 +31,26 @@
       linear-gradient(90deg, rgba(48,183,126,0.05) 1px, transparent 1px);
     background-size: 60px 60px;
   }
-  .crop {
-    position: absolute; left: 48px; width: 904px; height: 557px; overflow: hidden;
-    border-radius: 24px; border: 3px solid rgba(255,255,255,0.12); background: #181B1F;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 10px rgba(255,255,255,0.025);
+  img {
+    position: absolute; display: block; border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.45), 0 0 0 8px rgba(255,255,255,0.025);
   }
-  .crop img { position: absolute; width: 1895px; height: auto; display: block; }
-  .steps { top: 48px; }
-  .steps img { left: -32px; top: -123px; }
-  .heart { top: 637px; }
-  .heart img { left: -958px; top: -123px; }
-  .screen { top: 1226px; }
-  .screen img { left: -32px; top: -1275px; }
+  .tile { width: 444px; height: 304px; }
+  .l { left: 48px; } .r { left: 508px; }
+  .y1 { top: 48px; } .y2 { top: 368px; } .y3 { top: 688px; }
+  .chart { left: 48px; width: 904px; height: 612px; top: 1024px; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="grid"></div>
-  <div class="crop steps"><img src="../screenshots/grafana-narrow.png" alt=""></div>
-  <div class="crop heart"><img src="../screenshots/grafana-narrow.png" alt=""></div>
-  <div class="crop screen"><img src="../screenshots/grafana-narrow.png" alt=""></div>
+  <img class="tile l y1" src="../screenshots/readme/overview-tile-1.png" alt="">
+  <img class="tile r y1" src="../screenshots/readme/overview-tile-2.png" alt="">
+  <img class="tile l y2" src="../screenshots/readme/overview-tile-3.png" alt="">
+  <img class="tile r y2" src="../screenshots/readme/overview-tile-4.png" alt="">
+  <img class="tile l y3" src="../screenshots/readme/overview-tile-5.png" alt="">
+  <img class="tile r y3" src="../screenshots/readme/overview-tile-6.png" alt="">
+  <img class="chart" src="../screenshots/readme/overview-steps.png" alt="">
 </div>
 </body>
 </html>

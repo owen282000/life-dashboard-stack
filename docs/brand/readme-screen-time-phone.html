@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  Source for docs/readme-screen-time-phone.png, the phone version of readme-screen-time.html:
+  three panels of the Screen time dashboard (screen time per day, top apps, last phone use
+  before sleep), stacked so they stay readable on a screen about 400 px wide. The README
+  picks it with <picture> and a max-width media query.
+
+  Every image is one panel, shot on its own (viewPanel) in kiosk mode with Phone demo-android
+  at device scale 2 and cropped to the panel's border: 452 CSS px wide, 306 high (top apps
+  348). They live in docs/screenshots/readme/. Render with:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --screenshot=docs/readme-screen-time-phone.png --window-size=1000,2080 \
+      --hide-scrollbars --force-device-scale-factor=1 \
+      --default-background-color=00000000 docs/brand/readme-screen-time-phone.html
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1000px; height: 2080px; overflow: hidden; background: transparent; }
+  .card {
+    position: absolute; inset: 0; border-radius: 40px; overflow: hidden;
+    background: radial-gradient(130% 130% at 25% 20%, #171D21 0%, #14181C 45%, #101C1C 100%);
+  }
+  .grid {
+    position: absolute; inset: 0; opacity: 0.5;
+    background-image:
+      linear-gradient(rgba(48,183,126,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,183,126,0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  img {
+    position: absolute; left: 48px; width: 904px; display: block; border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.45), 0 0 0 8px rgba(255,255,255,0.025);
+  }
+  .per-day { top: 48px; height: 612px; }
+  .top-apps { top: 692px; height: 696px; }
+  .late-use { top: 1420px; height: 612px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid"></div>
+  <img class="per-day" src="../screenshots/readme/screen-time-per-day.png" alt="">
+  <img class="top-apps" src="../screenshots/readme/screen-time-top-apps.png" alt="">
+  <img class="late-use" src="../screenshots/readme/screen-time-late-use.png" alt="">
+</div>
+</body>
+</html>

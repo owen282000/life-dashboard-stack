@@ -1,0 +1,1153 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Nights for one phone: how long, which stages, and when you fell asleep and woke up. A night belongs to the day you wake up.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "lifedash"
+      ],
+      "targetBlank": false,
+      "title": "Life Dashboard",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Hours asleep in the most recent night, from the sleep stages, or the session length when there are none. A night belongs to the day you wake up (dash.sleep_nights).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, asleep_h AS \"Asleep\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest night",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average hours asleep per night in the range, from the stages when there are any (dash.sleep_nights). Last night counts once it has ended.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, asleep_h AS \"Asleep\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Average asleep",
+      "type": "stat",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Deep sleep as a share of time asleep, the average over nights with stages (dash.sleep_nights). Watches estimate stages differently, so compare your own nights rather than devices.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Needs a watch that tracks stages.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, deep_h / nullif(asleep_h, 0) * 100 AS \"Deep sleep\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND has_stages AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Deep sleep",
+      "type": "stat",
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "REM sleep as a share of time asleep, the average over nights with stages (dash.sleep_nights). Watches estimate stages differently, so compare your own nights rather than devices.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Needs a watch that tracks stages.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, rem_h / nullif(asleep_h, 0) * 100 AS \"REM sleep\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND has_stages AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "REM sleep",
+      "type": "stat",
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average time sleep started, local time, over the nights in the range (dash.sleep_nights). The start is the session end minus its length.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "links": [],
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Average bedtime$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(time '18:00' + avg(bed_min)::float8 * interval '1 minute', 'HH24:MI')\n       AS \"Average bedtime\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND bed_min IS NOT NULL\nHAVING count(*) > 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Average bedtime",
+      "type": "stat",
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average time the sleep session ended, local time, over the nights in the range (dash.sleep_nights).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "links": [],
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Average wake time$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(time '18:00' + avg(wake_min)::float8 * interval '1 minute', 'HH24:MI')\n       AS \"Average wake time\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND wake_min IS NOT NULL\nHAVING count(*) > 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Average wake time",
+      "type": "stat",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The latest night stage by stage, shown from 18:00 yesterday (dash.sleep_stages). A night without stages shows as one Asleep block; a night older than yesterday falls outside this panel.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "deep": {
+                  "text": "Deep",
+                  "color": "#4352C2",
+                  "index": 0
+                },
+                "light": {
+                  "text": "Light",
+                  "color": "#8F9AF2",
+                  "index": 1
+                },
+                "rem": {
+                  "text": "REM",
+                  "color": "#4FC1E0",
+                  "index": 2
+                },
+                "awake": {
+                  "text": "Awake",
+                  "color": "#E8B04B",
+                  "index": 3
+                },
+                "asleep": {
+                  "text": "Asleep",
+                  "color": "#7B83EB",
+                  "index": 4
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "",
+                  "color": "transparent",
+                  "index": 5
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "none": {
+                  "text": "No sleep yet. Turn on Sleep in the app, then run Backfill.",
+                  "color": "transparent",
+                  "index": 6
+                }
+              }
+            }
+          ],
+          "noValue": "No sleep yet. Turn on Sleep in the app, then run Backfill.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.85,
+        "showValue": "auto",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH n AS (\n  SELECT day, start_time, end_time\n  FROM dash.sleep_nights\n  WHERE install IN (${install:sqlstring})\n  ORDER BY day DESC\n  LIMIT 1\n),\ns AS (\n  SELECT st.start_time, st.end_time, st.stage\n  FROM dash.sleep_stages st\n  JOIN n USING (day)\n  WHERE st.install IN (${install:sqlstring}) AND st.end_time IS NOT NULL\n  UNION ALL\n  SELECT n.start_time, n.end_time, 'asleep'\n  FROM n\n  WHERE NOT EXISTS (\n    SELECT 1 FROM dash.sleep_stages st\n    WHERE st.install IN (${install:sqlstring}) AND st.day = n.day)\n),\np AS (\n  SELECT start_time AS time, stage FROM s\n  UNION ALL\n  SELECT end_time, NULL FROM s\n)\nSELECT * FROM (\n  SELECT DISTINCT ON (time) time, stage AS \"Stage\"\n  FROM p\n  ORDER BY time, stage IS NULL\n) x\nUNION ALL\n-- The panel shows its noValue text only for a frame with a time field, so an\n-- empty night is one transparent state that carries the message.\nSELECT t, st\nFROM (VALUES ($__timeFrom()::timestamptz, 'none'),\n             ($__timeTo()::timestamptz, NULL)) AS e(t, st)\nWHERE NOT EXISTS (SELECT 1 FROM s)\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now-1d/d+18h",
+      "hideTimeOverride": true,
+      "title": "Latest night by stage",
+      "type": "state-timeline",
+      "id": 7,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Hours per night by stage, on the day you wake up (dash.sleep_nights). Awake time sits on top, so a full bar is about the time in bed; the dashed line is the sleep goal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app, then run Backfill.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: h",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deep"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4352C2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Light"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8F9AF2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "REM"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4FC1E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Asleep, no stages"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B83EB"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Awake"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8B04B"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sleep goal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4CAD1"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time,\n       deep_h AS \"Deep\",\n       light_h AS \"Light\",\n       rem_h AS \"REM\",\n       CASE WHEN NOT has_stages THEN asleep_h END AS \"Asleep, no stages\",\n       awake_h AS \"Awake\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT c.time, nullif(regexp_replace(${sleep_goal_h:sqlstring}, '[^0-9.]', '', 'g'), '')::numeric AS \"Sleep goal\"\nFROM dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\nWHERE EXISTS (\n  SELECT 1 FROM dash.sleep_nights n\n  WHERE n.install IN (${install:sqlstring}) AND $__timeFilter(n.time))\nORDER BY c.time",
+          "refId": "B"
+        }
+      ],
+      "title": "Sleep stages per night",
+      "type": "timeseries",
+      "id": 8,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "When each night's sleep started and ended, local time (dash.sleep_nights). The start is the session end minus its length.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app, then run Backfill.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bedtime"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B83EB"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "time:HH:mm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wake time"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8B04B"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "time:HH:mm"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time,\n       extract(epoch FROM dash.day_start(date '2001-01-08') + interval '18 hours'\n                          + bed_min * interval '1 minute') * 1000 AS \"Bedtime\",\n       extract(epoch FROM dash.day_start(date '2001-01-08') + interval '18 hours'\n                          + wake_min * interval '1 minute') * 1000 AS \"Wake time\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Bedtime and wake time",
+      "type": "timeseries",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The lowest 10-minute average heart rate inside each night's sleep, from the watch's samples (dash.sleep_nights). A derived figure, not the resting heart rate a watch reports.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No overnight heart rate yet. It needs sleep and heart rate from the same nights.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, hr_low AS \"Overnight low\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND hr_low IS NOT NULL\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Overnight low heart rate",
+      "type": "timeseries",
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      }
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "lifedash"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "definition": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+        "description": "The phone, by the label in its webhook URL (/webhook/<label>).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Phone",
+        "multi": false,
+        "name": "install",
+        "options": [],
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "10000",
+          "value": "10000"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Step goal",
+        "name": "step_goal",
+        "options": [
+          {
+            "selected": true,
+            "text": "10000",
+            "value": "10000"
+          }
+        ],
+        "query": "10000",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "8",
+          "value": "8"
+        },
+        "description": "",
+        "hide": 0,
+        "label": "Sleep goal (h)",
+        "name": "sleep_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "8",
+            "value": "8"
+          }
+        ],
+        "query": "8",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "3",
+          "value": "3"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Screen time goal (h)",
+        "name": "screen_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "3",
+            "value": "3"
+          }
+        ],
+        "query": "3",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Sleep",
+  "uid": "lifedash-sleep",
+  "version": 1,
+  "weekStart": ""
+}

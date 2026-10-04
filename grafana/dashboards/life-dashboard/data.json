@@ -1,0 +1,717 @@
+{
+  "uid": "lifedash-data",
+  "title": "Data and sync",
+  "description": "What arrived, from which phone and app, and how fresh it is. The place to look when a panel stays empty.",
+  "tags": [
+    "lifedash"
+  ],
+  "timezone": "",
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "version": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "links": [
+    {
+      "title": "Life Dashboard",
+      "type": "dashboards",
+      "tags": [
+        "lifedash"
+      ],
+      "asDropdown": false,
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "install",
+        "label": "Phone",
+        "description": "The /webhook/<label> a phone sends to. Plain /webhook is default.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (SELECT install AS __text, install AS __value, max(last_received) AS sort FROM dash.installs GROUP BY install) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "definition": "WITH v AS (SELECT install AS __text, install AS __value, max(last_received) AS sort FROM dash.installs GROUP BY install) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+        "regex": "/^(?!-$).*/",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "install",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Last received",
+      "description": "How long ago each phone last sent something, per kind of payload, from `dash.installs`. Turns red after 24 hours without data: check the app's Logs tab, battery saving and permissions.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install || ', ' || platform AS name, hours_since * 3600 AS seconds FROM dash.installs WHERE install IN (${install:sqlstring}) ORDER BY install, platform"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "noValue": "Nothing received yet. Point the app at http://<this machine>:8080/webhook/<label> and tap Test ping.",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8E959E",
+                "value": null
+              },
+              {
+                "color": "#E5484D",
+                "value": 86400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "vertical",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": false,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 28
+        }
+      },
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Phones",
+      "description": "One row per Phone label and kind of payload, from `dash.installs`: the app version, the newest `sequence`, when the phone built its newest payload and when it arrived. Phones from before the upgrade show without a sequence.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install AS \"Phone\", platform AS \"Platform\", nullif(device, '') AS \"Device\", app_version AS \"App version\", last_sequence AS \"Last sequence\", payloads_24h AS \"Payloads in 24 h\", last_built AS \"Last built\", last_received AS \"Last received\" FROM dash.installs WHERE install IN (${install:sqlstring}) ORDER BY install, platform"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No phones yet. A test ping from the app is enough to add one.",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8E959E"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "string"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Payloads in 24 h"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last built"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last received"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 6
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Records per type per day",
+      "description": "How many records of each type are stored per local day, from `dash.records_days`. An empty cell is a day without records of that type. Day records such as `daily_totals` count one per day per Phone.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(day, 'MM/DD') AS day, type, sum(records) AS records FROM dash.records_days WHERE install IN (${install:sqlstring}) AND $__timeFilter(time) GROUP BY day, type ORDER BY day, type"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "day",
+            "rowField": "type",
+            "valueField": "records",
+            "emptyValue": "null"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "type\\day": "Type"
+            },
+            "indexByName": {},
+            "excludeByName": {}
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Type",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "No records in this time range yet. Sync Now in the app, or pick a longer range.",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8E959E"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "minWidth": 56
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "string"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "What you have",
+      "description": "Every type stored per Phone, payload source and writing app, over all time, from `dash.type_summary`. A panel elsewhere that stays empty usually means its type is missing here: switch it on in the app and run Backfill.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install AS \"Phone\", CASE payload_source WHEN 'health_connect' THEN 'Android' WHEN 'healthkit_ios' THEN 'iPhone' WHEN 'screen_time' THEN 'Screen time' ELSE payload_source END AS \"Source\", type AS \"Type\", source_app AS \"Writing app\", records AS \"Records\", first_time AS \"First\", last_time AS \"Last\", last_received AS \"Last received\" FROM dash.type_summary WHERE install IN (${install:sqlstring}) ORDER BY install, type, records DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "Nothing stored yet. Sync Now in the app, then run Backfill for older days.",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8E959E"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "string"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Records"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "First"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD HH:mm"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last received"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Steps per writing app",
+      "description": "Raw step records summed per writing app per day from `dash.steps_raw_days`, next to the daily total the phone counts once from `dash.activity_days`. A phone and a watch both write steps, so adding up the raw records counts the same walk twice. Pick one Phone to compare.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, source_app AS metric, sum(steps) AS steps FROM dash.steps_raw_days WHERE install IN (${install:sqlstring}) AND $__timeFilter(time) GROUP BY time, source_app ORDER BY time, source_app"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, sum(steps) AS \"Daily total, counted once\" FROM dash.activity_days WHERE install IN (${install:sqlstring}) AND $__timeFilter(time) GROUP BY time ORDER BY time"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "Time",
+            "mode": "outer"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "No steps yet. Switch on Steps in the app, then Sync Now.",
+          "color": {
+            "mode": "shades",
+            "fixedColor": "#8E959E"
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Daily total, counted once"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#30B77E"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xField": "Time",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "barWidth": 0.8,
+        "groupWidth": 0.75,
+        "barRadius": 0,
+        "stacking": "none",
+        "showValue": "never",
+        "fullHighlight": false,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    }
+  ]
+}

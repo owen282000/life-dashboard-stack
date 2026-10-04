@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /receiver
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      docker-compose:
+        patterns: ["*"]
+    ignore:
+      # A Postgres major cannot open the previous major's data directory; it needs
+      # tools/upgrade-postgres.sh, so majors are upgraded by hand.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: pip
+    directory: /receiver
+    schedule:
+      interval: weekly
+    groups:
+      pip:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

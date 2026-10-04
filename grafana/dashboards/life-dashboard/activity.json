@@ -1,0 +1,1367 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Steps, distance, calories and workouts for one phone. Daily figures come from the phone's own daily totals, so a phone and a watch aren't counted twice.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "lifedash"
+      ],
+      "targetBlank": false,
+      "title": "Life Dashboard",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Today's step count from the phone's daily totals, counted once when a phone and a watch both record. It grows with every sync; the sparkline shows the last 30 days (dash.activity_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "No steps today yet. A sync fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT day, steps FROM dash.activity_days\n  WHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n)\nSELECT c.time, a.steps AS \"Steps\"\nFROM dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\nLEFT JOIN a USING (day)\nWHERE EXISTS (SELECT 1 FROM a)\nORDER BY c.time",
+          "refId": "A"
+        }
+      ],
+      "title": "Steps so far today",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average steps per complete day in the range (dash.activity_days). Today is left out while it is still counting.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "No steps yet. A sync fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, steps AS \"Steps\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND complete AND steps IS NOT NULL AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Average steps",
+      "type": "stat",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average distance per complete day, from the daily totals (dash.activity_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "noValue": "No distance yet. A sync fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "lengthm"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, distance_m AS \"Distance\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND complete AND distance_m IS NOT NULL AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Average distance",
+      "type": "stat",
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average energy burned through movement per complete day, without the resting part (dash.activity_days). Not every watch writes active calories.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Only some watches write this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: kcal"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, active_kcal AS \"Active calories\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND complete AND active_kcal IS NOT NULL AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Average active calories",
+      "type": "stat",
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Recorded workout minutes per week, averaged over the complete days in the range (dash.workouts). Every workout counts, whatever its intensity.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "No workouts recorded yet.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: min"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH r AS (\n  SELECT dash.local_day($__timeFrom()::timestamptz) AS d0,\n         least(dash.local_day($__timeTo()::timestamptz), dash.today() - 1) AS d1\n)\nSELECT coalesce(sum(w.minutes), 0) * 7.0 / (r.d1 - r.d0 + 1) AS \"Per week\"\nFROM r\nLEFT JOIN dash.workouts w\n  ON w.install IN (${install:sqlstring}) AND w.day BETWEEN r.d0 AND r.d1\nWHERE r.d1 >= r.d0\n  AND EXISTS (SELECT 1 FROM dash.workouts WHERE install IN (${install:sqlstring}))\nGROUP BY r.d0, r.d1",
+          "refId": "A"
+        }
+      ],
+      "title": "Weekly workout minutes",
+      "type": "stat",
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Complete days in the range with at least the step goal, out of the complete days with a step count (dash.activity_days). Change the goal in the Step goal box.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "links": [],
+          "mappings": [],
+          "noValue": "No steps yet. A sync fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Days at goal$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) FILTER (WHERE steps >= nullif(regexp_replace(${step_goal:sqlstring}, '[^0-9.]', '', 'g'), '')::numeric) || ' of ' || count(*)\n       AS \"Days at goal\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND complete AND steps IS NOT NULL AND $__timeFilter(time)\nHAVING count(*) > 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Days at step goal",
+      "type": "stat",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Steps per day from the phone's daily totals, counted once even when a phone and a watch both record (dash.activity_days). Today's bar grows with every sync; the average leaves today out, and the dashed line is the step goal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No steps yet. Daily totals arrive with the first sync from the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "7-day average"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A6E8C8"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Step goal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4CAD1"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT day, steps FROM dash.activity_days\n  WHERE install IN (${install:sqlstring}) AND steps IS NOT NULL\n    AND time >= $__timeFrom()::timestamptz - interval '60 days'\n    AND time <= $__timeTo()::timestamptz\n),\nr AS (\n  SELECT c.day, c.time, a.steps,\n         avg(a.steps) FILTER (WHERE c.day < dash.today()) OVER (\n           ORDER BY c.day RANGE BETWEEN interval '6 days' PRECEDING AND CURRENT ROW\n         ) AS avg7\n  FROM dash.days($__timeFrom()::timestamptz - interval '60 days',\n                 $__timeTo()::timestamptz) c\n  LEFT JOIN a USING (day)\n)\nSELECT r.time,\n       r.steps AS \"Steps\",\n       CASE WHEN r.day < dash.today() THEN round(r.avg7) END AS \"7-day average\",\n       nullif(regexp_replace(${step_goal:sqlstring}, '[^0-9.]', '', 'g'), '')::numeric AS \"Step goal\"\nFROM r\nWHERE $__timeFilter(r.time)\n  AND EXISTS (SELECT 1 FROM a WHERE a.day >= dash.local_day($__timeFrom()::timestamptz))\nORDER BY r.time",
+          "refId": "A"
+        }
+      ],
+      "title": "Steps per day",
+      "type": "timeseries",
+      "id": 7,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Workout minutes per calendar week by activity, weeks starting on Monday; the current week is still filling (dash.workouts). The dashed line is the WHO guideline of 150 active minutes a week.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "shades",
+            "fixedColor": "#30B77E"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No workouts yet. Workouts recorded on a watch or phone fill this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: min",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^Walk/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#30B77E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^Run/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#1B7A50"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^(Biking|Cycling)/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A6E8C8"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/Strength/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B5D96B"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WHO guideline: 150 active minutes a week"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4CAD1"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT dash.day_start(date_trunc('week', day::timestamp)::date) AS time,\n       initcap(replace(activity, '_', ' ')) AS metric,\n       round(sum(minutes)) AS value\nFROM dash.workouts\nWHERE install IN (${install:sqlstring})\n  AND day >= date_trunc('week', dash.local_day($__timeFrom()::timestamptz)::timestamp)::date\n  AND day <= dash.local_day($__timeTo()::timestamptz)\nGROUP BY 1, 2\nORDER BY 1, 2",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT dash.day_start(w::date) AS time, 150 AS \"WHO guideline: 150 active minutes a week\"\nFROM generate_series(\n       date_trunc('week', dash.local_day($__timeFrom()::timestamptz)::timestamp),\n       dash.local_day($__timeTo()::timestamptz)::timestamp,\n       interval '1 week') AS w\nWHERE EXISTS (\n  SELECT 1 FROM dash.workouts\n  WHERE install IN (${install:sqlstring})\n    AND day >= date_trunc('week', dash.local_day($__timeFrom()::timestamptz)::timestamp)::date\n    AND day <= dash.local_day($__timeTo()::timestamptz))\nORDER BY 1",
+          "refId": "B"
+        }
+      ],
+      "title": "Workout minutes per week",
+      "type": "timeseries",
+      "id": 8,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Every workout in the range, newest first, with the app that recorded it (dash.workouts). Activity codes the stack doesn't know show as Other.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No workouts yet. Workouts recorded on a watch or phone fill this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Start"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:ddd D MMM HH:mm"
+              },
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Minutes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: min"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"Start\",\n       initcap(replace(activity, '_', ' ')) AS \"Activity\",\n       round(minutes) AS \"Minutes\",\n       source_app AS \"App\"\nFROM dash.workouts\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time DESC\nLIMIT 500",
+          "refId": "A"
+        }
+      ],
+      "title": "Workouts",
+      "type": "table",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Steps per hour of the day, one column per day (dash.steps_hourly). Approximate: it takes the busiest writing app per hour, so the hours don't add up to the daily total.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "noValue": "No hourly steps yet. They come from the step records a phone or watch writes.",
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "color": {
+          "exponent": 0.5,
+          "fill": "#30B77E",
+          "mode": "opacity",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Greens",
+          "steps": 64,
+          "min": 0
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "ge",
+          "value": "Steps"
+        },
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "showColorScale": false,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": true,
+          "unit": "none",
+          "axisLabel": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT dash.day_start(day) AS time,\n            sum(steps) FILTER (WHERE hour = 0) AS \"00\",\nsum(steps) FILTER (WHERE hour = 1) AS \"01\",\nsum(steps) FILTER (WHERE hour = 2) AS \"02\",\nsum(steps) FILTER (WHERE hour = 3) AS \"03\",\nsum(steps) FILTER (WHERE hour = 4) AS \"04\",\nsum(steps) FILTER (WHERE hour = 5) AS \"05\",\nsum(steps) FILTER (WHERE hour = 6) AS \"06\",\nsum(steps) FILTER (WHERE hour = 7) AS \"07\",\nsum(steps) FILTER (WHERE hour = 8) AS \"08\",\nsum(steps) FILTER (WHERE hour = 9) AS \"09\",\nsum(steps) FILTER (WHERE hour = 10) AS \"10\",\nsum(steps) FILTER (WHERE hour = 11) AS \"11\",\nsum(steps) FILTER (WHERE hour = 12) AS \"12\",\nsum(steps) FILTER (WHERE hour = 13) AS \"13\",\nsum(steps) FILTER (WHERE hour = 14) AS \"14\",\nsum(steps) FILTER (WHERE hour = 15) AS \"15\",\nsum(steps) FILTER (WHERE hour = 16) AS \"16\",\nsum(steps) FILTER (WHERE hour = 17) AS \"17\",\nsum(steps) FILTER (WHERE hour = 18) AS \"18\",\nsum(steps) FILTER (WHERE hour = 19) AS \"19\",\nsum(steps) FILTER (WHERE hour = 20) AS \"20\",\nsum(steps) FILTER (WHERE hour = 21) AS \"21\",\nsum(steps) FILTER (WHERE hour = 22) AS \"22\",\nsum(steps) FILTER (WHERE hour = 23) AS \"23\"\n     FROM dash.steps_hourly\n     WHERE install IN (${install:sqlstring})\n       AND day >= dash.local_day($__timeFrom()::timestamptz)\n       AND day <= dash.local_day($__timeTo()::timestamptz)\n     GROUP BY day\n     ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Steps by hour",
+      "type": "heatmap",
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Distance per day from the daily totals (dash.activity_days). Today's bar grows with every sync.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No distance yet. The phone or a watch writes it with the steps.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "lengthm",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, distance_m AS \"Distance\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND distance_m IS NOT NULL\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Distance per day",
+      "type": "timeseries",
+      "id": 11,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Active calories (movement) and total calories (movement plus resting) per day, from the daily totals (dash.activity_days). Today's values are still counting.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No calories yet. The phone or a watch writes them with the daily totals.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: kcal",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A6E8C8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, active_kcal AS \"Active\", total_kcal AS \"Total\"\nFROM dash.activity_days\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n  AND (active_kcal IS NOT NULL OR total_kcal IS NOT NULL)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Calories per day",
+      "type": "timeseries",
+      "id": 12,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      }
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "lifedash"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "definition": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+        "description": "The phone, by the label in its webhook URL (/webhook/<label>).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Phone",
+        "multi": false,
+        "name": "install",
+        "options": [],
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "10000",
+          "value": "10000"
+        },
+        "description": "",
+        "hide": 0,
+        "label": "Step goal",
+        "name": "step_goal",
+        "options": [
+          {
+            "selected": true,
+            "text": "10000",
+            "value": "10000"
+          }
+        ],
+        "query": "10000",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "8",
+          "value": "8"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Sleep goal (h)",
+        "name": "sleep_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "8",
+            "value": "8"
+          }
+        ],
+        "query": "8",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "3",
+          "value": "3"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Screen time goal (h)",
+        "name": "screen_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "3",
+            "value": "3"
+          }
+        ],
+        "query": "3",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Activity",
+  "uid": "lifedash-activity",
+  "version": 1,
+  "weekStart": ""
+}
