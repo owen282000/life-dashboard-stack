@@ -54,6 +54,15 @@ It's an example, so it keeps things simple:
 - A day's `daily_totals` and screen time are replaced by whatever arrives last, not by the payload with the highest `sequence`. A payload that waited on the phone can put back an older figure until the next sync.
 - The panels count days in UTC, not in your time zone, so a record near midnight can land on the day next to it.
 
+## Part of Life Dashboard
+
+Life Dashboard is four projects that work together. The two apps send the same payload, so an Android phone and an iPhone can feed one Home Assistant or one stack.
+
+| Android app | iPhone app | Home Assistant | Grafana stack |
+|:--:|:--:|:--:|:--:|
+| Health Connect and screen time | Apple Health | Sensors and a year of history | Postgres and Grafana dashboards |
+| [Open repository](https://github.com/owen282000/life-dashboard-companion-app) | [Open repository](https://github.com/owen282000/life-dashboard-companion-app-ios) | [Open repository](https://github.com/owen282000/life-dashboard-ha) | **You're here** |
+
 ## Quick start
 
 You need Docker with Compose, and a phone on the same network as the machine that runs the stack.
