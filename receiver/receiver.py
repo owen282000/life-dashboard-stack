@@ -1,7 +1,8 @@
 """Webhook receiver for Life Dashboard Companion payloads.
 
 Verifies the optional HMAC signature, upserts every record into Postgres keyed on the
-record uuid (so re-sent edits update in place), and stays dependency-light on purpose:
+record uuid, or on type, source, device and date for day records (so re-sent edits and
+growing day totals update in place), and stays dependency-light on purpose:
 stdlib http.server plus psycopg. See the repository README for the full quickstart.
 """
 
@@ -49,6 +50,14 @@ def synthetic_uuid(rtype: str, record: dict) -> str:
     return f"synthetic-{digest[:32]}"
 
 
+def record_key(rtype: str, payload: dict, record: dict) -> str:
+    if record.get("uuid"):
+        return record["uuid"]
+    if isinstance(record.get("date"), str):  # day records: daily_totals, screen_time
+        return f"{rtype}:{payload.get('source', 'unknown')}:{payload.get('device', '')}:{record['date']}"
+    return synthetic_uuid(rtype, record)
+
+
 def store(payload: dict) -> int:
     payload_source = payload.get("source", "unknown")
     inserted = 0
@@ -62,7 +71,7 @@ def store(payload: dict) -> int:
                 ts = record_time(record)
                 if ts is None:
                     continue
-                if len(ts) == 10:  # bare date (screen_time)
+                if len(ts) == 10:  # bare date (daily_totals, screen_time)
                     ts += "T00:00:00Z"
                 cur.execute(
                     """
@@ -74,7 +83,7 @@ def store(payload: dict) -> int:
                     (
                         key,
                         ts,
-                        record.get("uuid") or synthetic_uuid(key, record),
+                        record_key(key, payload, record),
                         record.get("source"),
                         payload_source,
                         json.dumps(record),
