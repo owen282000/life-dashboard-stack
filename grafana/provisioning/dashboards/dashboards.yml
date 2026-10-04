@@ -1,7 +1,10 @@
 apiVersion: 1
 providers:
   - name: LifeDashboard
-    folder: ''
+    folder: Life Dashboard
+    folderUid: lifedash
     type: file
+    allowUiUpdates: false
+    disableDeletion: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: /var/lib/grafana/dashboards/life-dashboard

@@ -1,35 +1,66 @@
+# Life Dashboard Stack: receiver, Postgres and Grafana.
+# Settings come from .env (see .env.example). Versions are pinned; Dependabot proposes
+# updates. Try it with sample data: docker compose --profile demo up -d --build
+
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18.6-alpine
+    # The guard refuses to start while an old Postgres 16 volume still holds the data.
+    entrypoint: ["/bin/sh", "/usr/local/bin/pg-guard.sh"]
+    command: ["postgres"]
     environment:
       POSTGRES_USER: lifedash
       POSTGRES_PASSWORD: lifedash
       POSTGRES_DB: lifedash
+      IGNORE_OLD_VOLUME: ${IGNORE_OLD_VOLUME:-0}
     volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql
+      # The Postgres 16 volume of earlier versions, read-only, for the guard and the upgrade.
+      - db-data:/old:ro
+      - ./tools/pg-guard.sh:/usr/local/bin/pg-guard.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lifedash"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U lifedash -d lifedash"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
+    restart: unless-stopped
 
   receiver:
     build: ./receiver
     environment:
       DATABASE_URL: postgresql://lifedash:lifedash@db:5432/lifedash
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      TZ: ${TZ:-UTC}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-lifedash-ro}
     ports:
       - "${RECEIVER_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 30
+    restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.2.3
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-lifedash}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-lifedash-ro}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/life-dashboard/overview.json
+      GF_DATE_FORMATS_DEFAULT_TIMEZONE: ${TZ:-UTC}
+      GF_USERS_DEFAULT_THEME: dark
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      # Keep the plugins that ship in the pinned image. Otherwise Grafana downloads newer
+      # ones on the first start, the Postgres data source included, which drops out for a
+      # second while it is replaced.
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     volumes:
@@ -37,9 +68,27 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
-      db:
+      receiver:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Sample data for two phones (demo-android and demo-iphone). Only with --profile demo.
+  demo:
+    profiles: ["demo"]
+    build: ./receiver
+    command: ["python", "/tools/sample_data.py"]
+    environment:
+      URL: http://receiver:8080
+      SECRET: ${WEBHOOK_SECRET:-}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./tools:/tools:ro
+    depends_on:
+      receiver:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
+  pgdata:
   db-data:
   grafana-data:

@@ -1,0 +1,1253 @@
+{
+  "uid": "lifedash-screen-time",
+  "title": "Screen time",
+  "description": "Minutes per day and per app from the Android app's Screen Time payloads, and how late the phone was used before sleep.",
+  "tags": [
+    "lifedash"
+  ],
+  "timezone": "",
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "version": 1,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "links": [
+    {
+      "title": "Life Dashboard",
+      "type": "dashboards",
+      "tags": [
+        "lifedash"
+      ],
+      "asDropdown": false,
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "install",
+        "label": "Phone",
+        "description": "The /webhook/<label> a phone sends to. Screen time and sleep line up when both tabs of the Android app use the same label.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (SELECT install AS __text, install AS __value, max(last_received) AS sort FROM dash.installs GROUP BY install) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "definition": "WITH v AS (SELECT install AS __text, install AS __value, max(last_received) AS sort FROM dash.installs GROUP BY install) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+        "regex": "/^(?!-$).*/",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "install",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "query",
+        "name": "device",
+        "label": "Device",
+        "description": "The phone model a Screen Time payload names. One Phone label normally has one.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (SELECT coalesce(nullif(device, ''), 'unknown') AS __text, device AS __value, max(day) AS sort FROM dash.screen_days WHERE install IN (${install:sqlstring}) GROUP BY device) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "definition": "WITH v AS (SELECT coalesce(nullif(device, ''), 'unknown') AS __text, device AS __value, max(day) AS sort FROM dash.screen_days WHERE install IN (${install:sqlstring}) GROUP BY device) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+        "regex": "/^(?!-$).*/",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "device",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "query",
+        "name": "app",
+        "label": "App",
+        "description": "Apps with screen time in the time range, most used first. Totals and the sleep panel ignore it.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (SELECT app AS __text, package AS __value, sum(minutes) AS sort FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND $__timeFilter(time) GROUP BY app, package) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "definition": "WITH v AS (SELECT app AS __text, package AS __value, sum(minutes) AS sort FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND $__timeFilter(time) GROUP BY app, package) SELECT __text, __value FROM (SELECT __text, __value, sort FROM v UNION ALL SELECT '-', '-', NULL WHERE NOT EXISTS (SELECT 1 FROM v)) x ORDER BY sort DESC NULLS LAST, __text",
+        "regex": "/^(?!-$).*/",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": "package",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 0,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "textbox",
+        "name": "screen_goal_h",
+        "label": "Goal (h)",
+        "description": "Hours of screen time a day, drawn as a dashed line. Empty hides the line.",
+        "query": "3",
+        "current": {
+          "selected": false,
+          "text": "3",
+          "value": "3"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "3",
+            "value": "3"
+          }
+        ],
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "",
+      "description": "Where screen time comes from, and how to make it line up with sleep.",
+      "options": {
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "Screen time comes from Android phones only. Use the same `/webhook/<label>` on the app's **Screen Time** and **Health** tabs, so both land under one Phone."
+      },
+      "transparent": true,
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Today so far",
+      "description": "Screen time of today, as of the last Screen Time sync, from `dash.screen_days`. The phone's day runs from 04:00 to 04:00 by default, so this tile stays empty until the first sync after 04:00.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT sum(total_min) AS minutes FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND day = dash.today()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "Nothing yet today",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Yesterday",
+      "description": "Screen time of yesterday, every app counted, from `dash.screen_days`. It includes apps filtered out on the phone, which the app panels below can't show.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT sum(total_min) AS minutes FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND day = dash.today() - 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "No screen time yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 4,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Daily average",
+      "description": "Average screen time per complete day in the time range, with the days as a sparkline. Today is left out because it's still growing.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, sum(total_min) AS minutes FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND complete AND $__timeFilter(time) GROUP BY time ORDER BY time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "No screen time yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "mean"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 8,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Top app",
+      "description": "The app with the most minutes over the complete days in the time range, with its average per day. Follows the App picker.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH d AS ( SELECT count(DISTINCT day) AS days FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND complete AND $__timeFilter(time) ), a AS ( SELECT app, sum(minutes) AS minutes FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND day < dash.today() AND $__timeFilter(time) GROUP BY app ) SELECT a.app, a.minutes::float8 / NULLIF(d.days, 0) AS minutes FROM a CROSS JOIN d ORDER BY a.minutes DESC, a.app LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "No screen time yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Apps used",
+      "description": "How many apps were used for more than a minute on at least one day in the time range. Apps filtered out on the phone aren't sent, so they don't count. Follows the App picker.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT NULLIF(count(DISTINCT package), 0) AS apps FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND $__timeFilter(time)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No screen time yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Last use",
+      "description": "The latest time any app was used on yesterday's phone day, from `last_used` in `dash.screen_apps`. The phone's day ends at 04:00 by default, so use after midnight still counts here.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(max(last_used) AT TIME ZONE dash.tz(), 'HH24:MI') AS last_use FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND day = dash.today() - 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No screen time yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^last_use$/"
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "same_as_value"
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 20,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Screen time per day",
+      "description": "Minutes per day for the 8 apps with the most time in the range, the rest as Other, from `dash.screen_apps`. Apps used a minute or less that day and apps filtered out on the phone aren't sent, so the stack can stay under the day's total.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH a AS ( SELECT time, app, sum(minutes) AS minutes FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND $__timeFilter(time) GROUP BY time, app ), top AS ( SELECT app, row_number() OVER (ORDER BY sum(minutes) DESC, app) AS rank FROM a GROUP BY app ORDER BY sum(minutes) DESC, app LIMIT 8 ) SELECT a.time, coalesce(top.app, 'Other') AS app, sum(a.minutes) AS minutes FROM a LEFT JOIN top ON top.app = a.app GROUP BY a.time, top.app, top.rank ORDER BY coalesce(top.rank, 99), a.time"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, NULLIF(regexp_replace(${screen_goal_h:sqlstring}, '[^0-9.]', '', 'g'), '')::float8 * 60 AS \"Goal\" FROM dash.days($__timeFrom(), $__timeTo()) WHERE EXISTS (SELECT 1 FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND $__timeFilter(time)) ORDER BY time"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
+          "options": {
+            "fields": [
+              "app"
+            ],
+            "keepFields": false,
+            "naming": {
+              "asLabels": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:min",
+          "decimals": 0,
+          "noValue": "No screen time yet. Add the Screen Time URL in the Android app.",
+          "min": 0,
+          "displayName": "${__field.labels.app}",
+          "color": {
+            "mode": "shades",
+            "fixedColor": "#F2884B"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "lineInterpolation": "linear",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisSoftMin": 0,
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "insertNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5C6670"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Goal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C7CDD4"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none",
+                  "group": "goal"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Goal (${screen_goal_h} h)"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top apps",
+      "description": "Average minutes per day over the complete days in the time range, for the 10 apps with the most time. From `dash.screen_apps`; follows the App picker.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH d AS ( SELECT count(DISTINCT day) AS days FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND complete AND $__timeFilter(time) ), a AS ( SELECT app, sum(minutes) AS minutes FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND day < dash.today() AND $__timeFilter(time) GROUP BY app ) SELECT a.app, a.minutes::float8 / NULLIF(d.days, 0) AS minutes FROM a CROSS JOIN d ORDER BY a.minutes DESC, a.app LIMIT 10"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "decimals": 0,
+          "noValue": "No screen time yet. Add the Screen Time URL in the Android app.",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "id": 9,
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Apps",
+      "description": "Every app in the time range: average minutes per complete day, the complete days it was used on, its share of all screen time on those days and when it was last used. From `dash.screen_apps` and `dash.screen_days`.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH d AS ( SELECT count(DISTINCT day) AS days, sum(total_min) AS total FROM dash.screen_days WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND complete AND $__timeFilter(time) ), a AS ( SELECT app, sum(minutes) AS minutes, count(DISTINCT day) AS days_used, max(last_used) AS last_used FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND day < dash.today() AND $__timeFilter(time) GROUP BY app ) SELECT a.app AS \"App\", a.minutes::float8 / NULLIF(d.days, 0) AS \"Per day\", a.days_used AS \"Days used\", a.minutes::float8 / NULLIF(d.total, 0) AS \"Share\", a.last_used AS \"Last used\" FROM a CROSS JOIN d ORDER BY a.minutes DESC, a.app"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "No screen time yet. Add the Screen Time URL in the Android app.",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "string"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": " "
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Per day"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "m"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Days used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": []
+      },
+      "id": 10,
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "heatmap",
+      "title": "Apps by day",
+      "description": "Minutes per app per day for the 12 apps with the most time in the range: the darker the cell, the more minutes. From `dash.screen_apps`; follows the App picker.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH a AS ( SELECT time, app, sum(minutes) AS minutes FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND package IN (${app:sqlstring}) AND $__timeFilter(time) GROUP BY time, app ), top AS ( SELECT app, row_number() OVER (ORDER BY sum(minutes), app DESC) AS rank FROM a GROUP BY app ORDER BY sum(minutes) DESC, app LIMIT 12 ) SELECT a.time, a.app, a.minutes FROM a JOIN top ON top.app = a.app ORDER BY top.rank, a.time"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "filter": {
+            "id": "byRefId",
+            "options": "A"
+          },
+          "options": {
+            "fields": [
+              "app"
+            ],
+            "keepFields": false,
+            "naming": {
+              "asLabels": true
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "^minutes (.*)$",
+            "renamePattern": "$1"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "No screen time yet. Add the Screen Time URL in the Android app.",
+          "displayName": "${__field.labels.app}",
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 2,
+        "color": {
+          "mode": "opacity",
+          "fill": "#F2884B",
+          "scale": "exponential",
+          "exponent": 0.6,
+          "steps": 64,
+          "reverse": false,
+          "scheme": "Oranges",
+          "min": 0
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": false,
+          "showColorScale": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "axisWidth": 104
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "m",
+          "decimals": 0
+        }
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Last phone use before sleep",
+      "description": "Minutes between the last app use of the phone day before a night and the start of that night's sleep, from `dash.screen_apps` and `dash.sleep_nights` under the same Phone. Below zero means an app was used after sleep started. The phone's day ends at 04:00 by default, and apps filtered out on the phone or used a minute or less aren't in the data. Count in the legend is the number of nights.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH s AS ( SELECT install, day, max(last_used) AS last_use FROM dash.screen_apps WHERE install IN (${install:sqlstring}) AND device IN (${device:sqlstring}) AND time BETWEEN $__timeFrom()::timestamptz - interval '2 days' AND $__timeTo() GROUP BY install, day ), n AS ( SELECT install, day, time, start_time FROM dash.sleep_nights WHERE install IN (${install:sqlstring}) AND $__timeFilter(time) ) SELECT n.time, n.install AS metric, round(extract(epoch FROM n.start_time - s.last_use) / 60) AS minutes FROM n JOIN s ON s.install = n.install AND s.day = n.day - 1 WHERE s.last_use IS NOT NULL ORDER BY n.time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:min",
+          "decimals": 0,
+          "noValue": "Needs screen time and sleep under the same Phone: use the same /webhook/<label> URL on the Health and Screen Time tabs.",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "lineInterpolation": "linear",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "insertNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "count"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "id": 12,
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      }
+    }
+  ]
+}

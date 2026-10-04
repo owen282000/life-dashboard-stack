@@ -1,0 +1,3 @@
+# Alert rules, contact points and notification policies in this folder are provisioned
+# when Grafana starts. The stack ships none.
+apiVersion: 1

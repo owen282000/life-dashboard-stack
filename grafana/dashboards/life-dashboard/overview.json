@@ -1,0 +1,1267 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Today, last night and the last week against the four before, for one phone. The other dashboards in the bar at the top go deeper.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "lifedash"
+      ],
+      "targetBlank": false,
+      "title": "Life Dashboard",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Today's step count from the phone's daily totals, counted once when a phone and a watch both record. It grows with every sync; the sparkline shows the last 30 days (dash.activity_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Activity",
+              "url": "/d/lifedash-activity?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "No steps today yet. A sync fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT day, steps FROM dash.activity_days\n  WHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n)\nSELECT c.time, a.steps AS \"Steps\"\nFROM dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\nLEFT JOIN a USING (day)\nWHERE EXISTS (SELECT 1 FROM a)\nORDER BY c.time",
+          "refId": "A"
+        }
+      ],
+      "title": "Steps so far today",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Hours asleep in the most recent night, from the sleep stages, or the session length when there are none. A night belongs to the day you wake up (dash.sleep_nights).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Sleep",
+              "url": "/d/lifedash-sleep?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, asleep_h AS \"Asleep\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest night",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The lowest 10-minute average heart rate during the latest night, worked out from the watch's heart rate samples. It is not the resting heart rate a watch reports (dash.sleep_nights).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Heart and body",
+              "url": "/d/lifedash-heart-body?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "Needs sleep and heart rate data.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, hr_low AS \"Overnight low\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND hr_low IS NOT NULL\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Overnight low HR",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Mean of the weigh-ins in the 7 days up to the latest one, which evens out day-to-day swings (dash.weight_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9AA9BA"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Heart and body",
+              "url": "/d/lifedash-heart-body?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "No weight yet. A smart scale fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#9AA9BA",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kg"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, kg_7d AS \"Weight, 7-day mean\"\nFROM dash.weight_days\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Weight, 7-day mean",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Minutes on the phone yesterday, all apps, from the Android app's screen time. Screen time days run from 04:00 to 04:00 unless you changed that on the phone (dash.screen_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#F2884B"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Screen time",
+              "url": "/d/lifedash-screen-time?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "Android Screen Time URL fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2884B",
+                "value": null
+              }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH s AS (\n  SELECT day, sum(total_min) AS total\n  FROM dash.screen_days\n  WHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n  GROUP BY day\n)\nSELECT c.time, s.total AS \"Screen time\"\nFROM dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\nLEFT JOIN s USING (day)\nWHERE c.day < dash.today() AND EXISTS (SELECT 1 FROM s)\nORDER BY c.time",
+          "refId": "A"
+        }
+      ],
+      "title": "Screen time yesterday",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Hours since the receiver last got a payload from this phone, health or screen time (dash.installs). Turns red after 24 hours without data.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Open Data and sync",
+              "url": "/d/lifedash-data?${install:queryparam}&${step_goal:queryparam}&${sleep_goal_h:queryparam}&${screen_goal_h:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "noValue": "Nothing received yet.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8E959E",
+                "value": null
+              },
+              {
+                "color": "#E5484D",
+                "value": 24
+              }
+            ]
+          },
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT min(hours_since) AS \"Since last sync\"\nFROM dash.installs\nWHERE install IN (${install:sqlstring})\nHAVING min(hours_since) IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Since last sync",
+      "type": "stat",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Averages for the last 7 complete days next to the 28 days before them; today is left out because it is still counting. Workouts are minutes per week, and HRV stays split by measure because RMSSD and SDNN are different numbers. Days counts the days with data in each window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "Nothing to compare yet. A few days of syncs fill this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Metric"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last 7 days"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "28 days before"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Change"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Days"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH t AS (SELECT dash.today() AS today),\nm AS (\n  SELECT 1 AS ord, 'Steps per day' AS metric, 'steps' AS kind,\n         avg(steps) FILTER (WHERE day >= today - 7)::float8 AS cur,\n         avg(steps) FILTER (WHERE day < today - 7)::float8 AS base,\n         count(steps) FILTER (WHERE day >= today - 7) AS ncur,\n         count(steps) FILTER (WHERE day < today - 7) AS nbase\n  FROM dash.activity_days, t\n  WHERE install IN (${install:sqlstring}) AND day >= today - 35 AND day < today\n  UNION ALL\n  SELECT 2, 'Asleep per night', 'hours',\n         avg(asleep_h) FILTER (WHERE day >= today - 7),\n         avg(asleep_h) FILTER (WHERE day < today - 7),\n         count(asleep_h) FILTER (WHERE day >= today - 7),\n         count(asleep_h) FILTER (WHERE day < today - 7)\n  FROM dash.sleep_nights, t\n  WHERE install IN (${install:sqlstring}) AND day >= today - 35 AND day < today\n  UNION ALL\n  SELECT 3, 'Overnight low heart rate', 'bpm',\n         avg(hr_low) FILTER (WHERE day >= today - 7),\n         avg(hr_low) FILTER (WHERE day < today - 7),\n         count(hr_low) FILTER (WHERE day >= today - 7),\n         count(hr_low) FILTER (WHERE day < today - 7)\n  FROM dash.sleep_nights, t\n  WHERE install IN (${install:sqlstring}) AND day >= today - 35 AND day < today\n  UNION ALL\n  SELECT CASE measure WHEN 'rmssd' THEN 4 ELSE 5 END,\n         CASE measure WHEN 'rmssd' THEN 'HRV (RMSSD)' WHEN 'sdnn' THEN 'HRV (SDNN)'\n                      ELSE 'HRV (' || measure || ')' END,\n         'ms',\n         avg(median) FILTER (WHERE day >= today - 7),\n         avg(median) FILTER (WHERE day < today - 7),\n         count(median) FILTER (WHERE day >= today - 7),\n         count(median) FILTER (WHERE day < today - 7)\n  FROM dash.measurement_days, t\n  WHERE install IN (${install:sqlstring}) AND type = 'heart_rate_variability'\n    AND day >= today - 35 AND day < today\n  GROUP BY measure\n  UNION ALL\n  SELECT 6, 'Workouts per week', 'minutes',\n         CASE WHEN count(*) > 0 THEN coalesce(sum(minutes) FILTER (WHERE day >= today - 7), 0) END,\n         CASE WHEN count(*) > 0 THEN coalesce(sum(minutes) FILTER (WHERE day < today - 7), 0) / 4 END,\n         count(DISTINCT day) FILTER (WHERE day >= today - 7),\n         count(DISTINCT day) FILTER (WHERE day < today - 7)\n  FROM dash.workouts, t\n  WHERE install IN (${install:sqlstring}) AND day >= today - 35 AND day < today\n  UNION ALL\n  SELECT 7, 'Screen time per day', 'screen',\n         avg(total) FILTER (WHERE day >= today - 7),\n         avg(total) FILTER (WHERE day < today - 7),\n         count(total) FILTER (WHERE day >= today - 7),\n         count(total) FILTER (WHERE day < today - 7)\n  FROM (SELECT day, sum(total_min)::float8 AS total\n        FROM dash.screen_days\n        WHERE install IN (${install:sqlstring})\n        GROUP BY day) s, t\n  WHERE day >= today - 35 AND day < today\n)\nSELECT metric AS \"Metric\",\n       CASE kind\n     WHEN 'steps' THEN to_char(round(cur), 'FM999,999,990')\n     WHEN 'hours' THEN to_char(cur, 'FM990.0') || ' h'\n     WHEN 'bpm' THEN round(cur)::int || ' bpm'\n     WHEN 'ms' THEN round(cur)::int || ' ms'\n     WHEN 'minutes' THEN round(cur)::int || ' min'\n     WHEN 'screen' THEN (round(cur)::int / 60) || ' h ' || (round(cur)::int % 60) || ' min'\n   END AS \"Last 7 days\",\n       CASE kind\n     WHEN 'steps' THEN to_char(round(base), 'FM999,999,990')\n     WHEN 'hours' THEN to_char(base, 'FM990.0') || ' h'\n     WHEN 'bpm' THEN round(base)::int || ' bpm'\n     WHEN 'ms' THEN round(base)::int || ' ms'\n     WHEN 'minutes' THEN round(base)::int || ' min'\n     WHEN 'screen' THEN (round(base)::int / 60) || ' h ' || (round(base)::int % 60) || ' min'\n   END AS \"28 days before\",\n       CASE WHEN base > 0 AND cur IS NOT NULL\n            THEN CASE WHEN cur >= base THEN '+' ELSE '' END\n                 || round((cur - base) / base * 100)::int || '%'\n       END AS \"Change\",\n       ncur || '/7, ' || nbase || '/28' AS \"Days\"\nFROM m\nWHERE cur IS NOT NULL OR base IS NOT NULL\nORDER BY ord",
+          "refId": "A"
+        }
+      ],
+      "title": "Last 7 days vs the 28 before",
+      "type": "table",
+      "id": 7,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Steps per day from the phone's daily totals, counted once even when a phone and a watch both record (dash.activity_days). Today's bar grows with every sync; the average leaves today out, and the dashed line is the step goal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#30B77E"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No steps yet. Daily totals arrive with the first sync from the app.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#30B77E",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "7-day average"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A6E8C8"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Step goal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4CAD1"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT day, steps FROM dash.activity_days\n  WHERE install IN (${install:sqlstring}) AND steps IS NOT NULL\n    AND time >= $__timeFrom()::timestamptz - interval '60 days'\n    AND time <= $__timeTo()::timestamptz\n),\nr AS (\n  SELECT c.day, c.time, a.steps,\n         avg(a.steps) FILTER (WHERE c.day < dash.today()) OVER (\n           ORDER BY c.day RANGE BETWEEN interval '6 days' PRECEDING AND CURRENT ROW\n         ) AS avg7\n  FROM dash.days($__timeFrom()::timestamptz - interval '60 days',\n                 $__timeTo()::timestamptz) c\n  LEFT JOIN a USING (day)\n)\nSELECT r.time,\n       r.steps AS \"Steps\",\n       CASE WHEN r.day < dash.today() THEN round(r.avg7) END AS \"7-day average\",\n       nullif(regexp_replace(${step_goal:sqlstring}, '[^0-9.]', '', 'g'), '')::numeric AS \"Step goal\"\nFROM r\nWHERE $__timeFilter(r.time)\n  AND EXISTS (SELECT 1 FROM a WHERE a.day >= dash.local_day($__timeFrom()::timestamptz))\nORDER BY r.time",
+          "refId": "A"
+        }
+      ],
+      "title": "Steps per day",
+      "type": "timeseries",
+      "id": 8,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Hours per night by stage, on the day you wake up (dash.sleep_nights). Nights without stages show as one Asleep bar; awake time sits on top.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7B83EB"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "mappings": [],
+          "noValue": "No sleep yet. Turn on Sleep in the app, then run Backfill.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7B83EB",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: h",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deep"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4352C2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Light"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8F9AF2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "REM"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4FC1E0"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Asleep, no stages"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B83EB"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Awake"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8B04B"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time,\n       deep_h AS \"Deep\",\n       light_h AS \"Light\",\n       rem_h AS \"REM\",\n       CASE WHEN NOT has_stages THEN asleep_h END AS \"Asleep, no stages\",\n       awake_h AS \"Awake\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Sleep stages per night",
+      "type": "timeseries",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Heart rate over the last 7 days: the hourly average, with the lowest and highest sample of each hour as a band (dash.heart_rate_hourly). Hours without samples stay empty.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No heart rate yet. A watch or ring that writes heart rate to Health Connect or Apple Health fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Highest"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 25
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lowest"
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8708A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lowest"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8708A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Average"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH span AS (\n  SELECT $__timeTo()::timestamptz - $__timeFrom()::timestamptz <= interval '14 days'\n         AS hourly\n),\nhourly AS (\n  SELECT g AS time, r.bpm_min, r.bpm, r.bpm_max\n  FROM span,\n       generate_series(dash.hour_start($__timeFrom()::timestamptz),\n                       $__timeTo()::timestamptz, interval '1 hour') AS g\n  LEFT JOIN (\n    SELECT time, bpm_min, bpm, bpm_max FROM dash.heart_rate_hourly\n    WHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n  ) r ON r.time = g\n  WHERE span.hourly\n),\ndaily AS (\n  SELECT c.time, r.bpm_min, r.bpm, r.bpm_max\n  FROM span,\n       dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\n  LEFT JOIN (\n    SELECT day, bpm_min, bpm, bpm_max FROM dash.heart_days\n    WHERE install IN (${install:sqlstring})\n      AND day >= dash.local_day($__timeFrom()::timestamptz)\n      AND day <= dash.local_day($__timeTo()::timestamptz)\n  ) r ON r.day = c.day\n  WHERE NOT span.hourly\n),\nx AS (SELECT * FROM hourly UNION ALL SELECT * FROM daily)\nSELECT time, bpm_min AS \"Lowest\", bpm AS \"Average\", bpm_max AS \"Highest\"\nFROM x\nWHERE EXISTS (SELECT 1 FROM x WHERE bpm IS NOT NULL)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Heart rate",
+      "type": "timeseries",
+      "timeFrom": "7d",
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      }
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "lifedash"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "definition": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+        "description": "The phone, by the label in its webhook URL (/webhook/<label>).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Phone",
+        "multi": false,
+        "name": "install",
+        "options": [],
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "10000",
+          "value": "10000"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Step goal",
+        "name": "step_goal",
+        "options": [
+          {
+            "selected": true,
+            "text": "10000",
+            "value": "10000"
+          }
+        ],
+        "query": "10000",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "8",
+          "value": "8"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Sleep goal (h)",
+        "name": "sleep_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "8",
+            "value": "8"
+          }
+        ],
+        "query": "8",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "3",
+          "value": "3"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Screen time goal (h)",
+        "name": "screen_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "3",
+            "value": "3"
+          }
+        ],
+        "query": "3",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Life Dashboard",
+  "uid": "lifedashboard",
+  "version": 1,
+  "weekStart": ""
+}

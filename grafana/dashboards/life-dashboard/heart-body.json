@@ -1,0 +1,1905 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#30B77E",
+        "name": "Workouts",
+        "filter": {
+          "exclude": false,
+          "ids": [
+            7
+          ]
+        },
+        "target": {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "Anno",
+          "rawSql": "SELECT time, end_time AS timeend,\n       initcap(replace(activity, '_', ' ')) || ', ' || round(minutes) || ' min'\n       AS text\nFROM dash.workouts\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time"
+        }
+      }
+    ]
+  },
+  "description": "Heart rate, recovery figures and body measurements for one phone. Rarer types sit in the collapsed rows at the bottom.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "lifedash"
+      ],
+      "targetBlank": false,
+      "title": "Life Dashboard",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The lowest 10-minute average heart rate during the latest night, worked out from the watch's heart rate samples. It is not the resting heart rate a watch reports (dash.sleep_nights).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Needs sleep and heart rate data.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, hr_low AS \"Overnight low\"\nFROM dash.sleep_nights\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time) AND hr_low IS NOT NULL\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Overnight low HR",
+      "type": "stat",
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "id": 1,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The latest daily resting heart rate as the watch reports it (dash.measurement_days). Only some watches write it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Only some watches write this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"Resting heart rate\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'resting_heart_rate' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Resting heart rate",
+      "type": "stat",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The latest daily median heart rate variability (dash.measurement_days). Android sends RMSSD and iPhone sends SDNN; they are different numbers and never combined.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3CB4C8"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Only some watches write HRV.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3CB4C8",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, CASE measure WHEN 'rmssd' THEN 'RMSSD' WHEN 'sdnn' THEN 'SDNN'\n            ELSE 'HRV (' || measure || ')' END AS metric,\n       median AS value\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'heart_rate_variability' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "HRV",
+      "type": "stat",
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The latest daily median blood oxygen (SpO2) reading (dash.measurement_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3CB4C8"
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "noValue": "Only some watches and rings write this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3CB4C8",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"Blood oxygen\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'oxygen_saturation' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Blood oxygen",
+      "type": "stat",
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The first weigh-in of the latest day with one (dash.weight_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9AA9BA"
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "noValue": "No weight yet. A smart scale fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#9AA9BA",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kg"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, kg AS \"Weight\"\nFROM dash.weight_days\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Weight",
+      "type": "stat",
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The latest VO2 max estimate (dash.measurement_days). Watches estimate it from runs or brisk walks, so it moves slowly.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3CB4C8"
+          },
+          "decimals": 1,
+          "links": [],
+          "mappings": [],
+          "noValue": "Only some watches estimate this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3CB4C8",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: ml/kg/min"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "same_as_value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"VO2 max\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'vo2_max' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "VO2 max",
+      "type": "stat",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Average heart rate with the lowest and highest sample as a band: per hour for ranges up to 14 days, per day beyond (dash.heart_rate_hourly, dash.heart_days). Workouts show as marked regions (dash.workouts).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No heart rate yet. A watch or ring that writes heart rate to Health Connect or Apple Health fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Highest"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 25
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Lowest"
+              },
+              {
+                "id": "custom.gradientMode",
+                "value": "none"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8708A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lowest"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E8708A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Average"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH span AS (\n  SELECT $__timeTo()::timestamptz - $__timeFrom()::timestamptz <= interval '14 days'\n         AS hourly\n),\nhourly AS (\n  SELECT g AS time, r.bpm_min, r.bpm, r.bpm_max\n  FROM span,\n       generate_series(dash.hour_start($__timeFrom()::timestamptz),\n                       $__timeTo()::timestamptz, interval '1 hour') AS g\n  LEFT JOIN (\n    SELECT time, bpm_min, bpm, bpm_max FROM dash.heart_rate_hourly\n    WHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\n  ) r ON r.time = g\n  WHERE span.hourly\n),\ndaily AS (\n  SELECT c.time, r.bpm_min, r.bpm, r.bpm_max\n  FROM span,\n       dash.days($__timeFrom()::timestamptz, $__timeTo()::timestamptz) c\n  LEFT JOIN (\n    SELECT day, bpm_min, bpm, bpm_max FROM dash.heart_days\n    WHERE install IN (${install:sqlstring})\n      AND day >= dash.local_day($__timeFrom()::timestamptz)\n      AND day <= dash.local_day($__timeTo()::timestamptz)\n  ) r ON r.day = c.day\n  WHERE NOT span.hourly\n),\nx AS (SELECT * FROM hourly UNION ALL SELECT * FROM daily)\nSELECT time, bpm_min AS \"Lowest\", bpm AS \"Average\", bpm_max AS \"Highest\"\nFROM x\nWHERE EXISTS (SELECT 1 FROM x WHERE bpm IS NOT NULL)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Heart rate",
+      "type": "timeseries",
+      "id": 7,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Resting heart rate per day as the watch reports it, the median when it writes more than one (dash.measurement_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E8708A"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No resting heart rate yet. Only some watches write it.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E8708A",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix: bpm",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"Resting heart rate\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'resting_heart_rate' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Resting heart rate",
+      "type": "timeseries",
+      "id": 8,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Daily median HRV, one line per measure: RMSSD from Android and SDNN from iPhone, never averaged together (dash.measurement_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3CB4C8"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No HRV yet. Only some watches write it.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3CB4C8",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HRV (SDNN, iPhone)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#93DCE8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time,\n       CASE measure WHEN 'rmssd' THEN 'HRV (RMSSD, Android)' WHEN 'sdnn' THEN 'HRV (SDNN, iPhone)'\n                 ELSE 'HRV (' || measure || ')' END\n       AS metric,\n       median AS value\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'heart_rate_variability' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Heart rate variability",
+      "type": "timeseries",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "The first weigh-in of each day as dots, with the mean of the trailing 7 days as a line (dash.weight_days). The same reading from two apps counts once.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9AA9BA"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No weight yet. A smart scale or a weight entered in Health Connect or Apple Health fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#9AA9BA",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kg",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "7-day mean"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C9D3DE"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, kg AS \"Weight\", kg_7d AS \"7-day mean\"\nFROM dash.weight_days\nWHERE install IN (${install:sqlstring}) AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Weight",
+      "type": "timeseries",
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Body fat per day, the first reading of the day (dash.measurement_days). Scales estimate it, so look at the trend more than at one reading.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9AA9BA"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No body fat yet. A smart scale fills this.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#9AA9BA",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, first AS \"Body fat\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'body_fat' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Body fat",
+      "type": "timeseries",
+      "id": 11,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "lifedash-postgres"
+      },
+      "description": "Daily median blood oxygen on the left axis and respiratory rate on the right (dash.measurement_days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3CB4C8"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.7,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "No blood oxygen or respiratory rate yet. Only some watches and rings write them.",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3CB4C8",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Respiratory rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: /min"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#93DCE8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"Blood oxygen\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'oxygen_saturation' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time, median AS \"Respiratory rate\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'respiratory_rate' AND $__timeFilter(time)\nORDER BY time",
+          "refId": "B"
+        }
+      ],
+      "title": "Blood oxygen and respiratory rate",
+      "type": "timeseries",
+      "id": 12,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      }
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 13,
+      "panels": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "description": "Every systolic and diastolic reading (dash.measurements).",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#E8708A"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.7,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "always",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "noValue": "No blood pressure yet. A connected cuff or an entry in Health Connect or Apple Health fills this.",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#E8708A",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "suffix: mmHg",
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Diastolic"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "#F4AFC0"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "lifedash-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT time, initcap(measure) AS metric, value\nFROM dash.measurements\nWHERE install IN (${install:sqlstring}) AND type = 'blood_pressure' AND $__timeFilter(time)\nORDER BY time",
+              "refId": "A"
+            }
+          ],
+          "title": "Blood pressure",
+          "type": "timeseries",
+          "id": 14,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 37
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "description": "Every glucose reading (dash.measurements).",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#9AA9BA"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.7,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "always",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "noValue": "No glucose yet. A glucose meter or sensor app fills this.",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#9AA9BA",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "suffix: mmol/L",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "lifedash-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT time, value AS \"Glucose\"\nFROM dash.measurements\nWHERE install IN (${install:sqlstring}) AND type = 'blood_glucose' AND $__timeFilter(time)\nORDER BY time",
+              "refId": "A"
+            }
+          ],
+          "title": "Blood glucose",
+          "type": "timeseries",
+          "id": 15,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 37
+          }
+        }
+      ],
+      "title": "Blood pressure and glucose",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 16,
+      "panels": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "description": "The first reading per day of lean body mass, bone mass and body water mass (dash.measurement_days). Bone and water mass come from Android only.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#9AA9BA"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.7,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "always",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "noValue": "No body composition yet. Some smart scales write it.",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#9AA9BA",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "kg",
+              "decimals": 1
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bone mass"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "#6E7E90"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Body water mass"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "#C9D3DE"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "lifedash-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT time,\n       CASE type WHEN 'lean_body_mass' THEN 'Lean body mass'\n                 WHEN 'bone_mass' THEN 'Bone mass'\n                 ELSE 'Body water mass' END AS metric,\n       first AS value\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type IN ('lean_body_mass', 'bone_mass', 'body_water_mass')\n  AND $__timeFilter(time)\nORDER BY time",
+              "refId": "A"
+            }
+          ],
+          "title": "Lean, bone and water mass",
+          "type": "timeseries",
+          "id": 17,
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 38
+          }
+        }
+      ],
+      "title": "Body composition",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 18,
+      "panels": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "description": "Body and basal body temperature readings (dash.measurements).",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#9AA9BA"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.7,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "always",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "noValue": "No body temperature yet. A thermometer app or an entry in Health Connect or Apple Health fills this.",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#9AA9BA",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "celsius",
+              "decimals": 2
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Basal body temperature"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "#C9D3DE"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "lifedash-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT time,\n       CASE type WHEN 'basal_body_temperature' THEN 'Basal body temperature'\n                 ELSE 'Body temperature' END AS metric,\n       value\nFROM dash.measurements\nWHERE install IN (${install:sqlstring}) AND type IN ('body_temperature', 'basal_body_temperature')\n  AND $__timeFilter(time)\nORDER BY time",
+              "refId": "A"
+            }
+          ],
+          "title": "Body temperature",
+          "type": "timeseries",
+          "id": 19,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 39
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "lifedash-postgres"
+          },
+          "description": "The change in skin temperature against the watch's own baseline, averaged per day (dash.measurement_days). Android only.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "#9AA9BA"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.7,
+                "drawStyle": "bars",
+                "fillOpacity": 70,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 0,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "noValue": "No skin temperature yet. Only some Android watches and rings write it.",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#9AA9BA",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "celsius",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "lifedash-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT time, avg AS \"Skin temperature change\"\nFROM dash.measurement_days\nWHERE install IN (${install:sqlstring}) AND type = 'skin_temperature' AND $__timeFilter(time)\nORDER BY time",
+              "refId": "A"
+            }
+          ],
+          "title": "Skin temperature change",
+          "type": "timeseries",
+          "id": 20,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 39
+          }
+        }
+      ],
+      "title": "Temperature",
+      "type": "row"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "lifedash"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "lifedash-postgres"
+        },
+        "definition": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+        "description": "The phone, by the label in its webhook URL (/webhook/<label>).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Phone",
+        "multi": false,
+        "name": "install",
+        "options": [],
+        "query": {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT install FROM dash.installs GROUP BY install ORDER BY max(last_received) DESC NULLS LAST",
+          "refId": "SQLVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "10000",
+          "value": "10000"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Step goal",
+        "name": "step_goal",
+        "options": [
+          {
+            "selected": true,
+            "text": "10000",
+            "value": "10000"
+          }
+        ],
+        "query": "10000",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "8",
+          "value": "8"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Sleep goal (h)",
+        "name": "sleep_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "8",
+            "value": "8"
+          }
+        ],
+        "query": "8",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "3",
+          "value": "3"
+        },
+        "description": "",
+        "hide": 2,
+        "label": "Screen time goal (h)",
+        "name": "screen_goal_h",
+        "options": [
+          {
+            "selected": true,
+            "text": "3",
+            "value": "3"
+          }
+        ],
+        "query": "3",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Heart and body",
+  "uid": "lifedash-heart-body",
+  "version": 1,
+  "weekStart": ""
+}

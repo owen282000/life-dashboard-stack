@@ -2,13 +2,15 @@ apiVersion: 1
 datasources:
   - name: LifeDashboard Postgres
     uid: lifedash-postgres
-    type: postgres
+    type: grafana-postgresql-datasource
     access: proxy
     url: db:5432
-    user: lifedash
+    user: grafana_ro
+    isDefault: true
     secureJsonData:
-      password: lifedash
+      password: $GRAFANA_DB_PASSWORD
     jsonData:
       database: lifedash
       sslmode: disable
-      postgresVersion: 1600
+      postgresVersion: 1500
+      timeInterval: 1m
