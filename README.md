@@ -1,6 +1,19 @@
-# Life Dashboard Stack
+<p align="center">
+  <img src="docs/readme-icon.png" alt="Life Dashboard icon" width="128" height="128">
+</p>
 
-From phone to Grafana in 10 minutes: a ready-made, self-hosted receiving stack for
+<h1 align="center">Life Dashboard Stack</h1>
+
+<h3 align="center">From phone to Grafana in 10 minutes</h3>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker%20Compose-ready-2496ED.svg" alt="Docker Compose"></a>
+  <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Postgres-JSONB-4169E1.svg" alt="Postgres"></a>
+  <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-dashboard-F46800.svg" alt="Grafana"></a>
+</p>
+
+A ready-made, self-hosted receiving stack for
 [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app)
 (Android) and its [iOS companion](https://github.com/owen282000/life-dashboard-companion-app-ios).
 
