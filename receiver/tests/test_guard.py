@@ -10,7 +10,7 @@ import uuid
 
 import pytest
 
-from conftest import REPO_DIR, _compose_image
+from conftest import REPO_DIR, _postgres_image
 
 GUARD = REPO_DIR / "tools" / "pg-guard.sh"
 
@@ -31,7 +31,7 @@ def volumes():
 
 
 def write(volume, path, text):
-    docker("run", "--rm", "-v", f"{volume}:/v", "--entrypoint", "sh", _compose_image(),
+    docker("run", "--rm", "-v", f"{volume}:/v", "--entrypoint", "sh", _postgres_image(),
            "-c", f"printf '{text}' > /v/{path}")
 
 
@@ -40,7 +40,7 @@ def run_guard(vols, *env):
             "-v", f"{GUARD}:/usr/local/bin/pg-guard.sh:ro"]
     for e in env:
         args += ["-e", e]
-    args += ["--entrypoint", "/bin/sh", _compose_image(), "/usr/local/bin/pg-guard.sh", "true"]
+    args += ["--entrypoint", "/bin/sh", _postgres_image(), "/usr/local/bin/pg-guard.sh", "true"]
     return docker(*args, check=False)
 
 

@@ -1,19 +1,12 @@
 version: 2
 updates:
+  # The base images of the three published images: python, grafana/grafana and postgres.
   - package-ecosystem: docker
-    directory: /receiver
+    directories: ["/receiver", "/grafana", "/db"]
     schedule:
       interval: weekly
     groups:
       docker:
-        patterns: ["*"]
-
-  - package-ecosystem: docker-compose
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      docker-compose:
         patterns: ["*"]
     ignore:
       # A Postgres major cannot open the previous major's data directory; it needs

@@ -31,10 +31,16 @@ def test_views_md_lists_every_view_and_column(db):
 
 
 def test_no_long_dashes_in_shipped_text():
-    for path in [REPO_DIR / "docs" / "views.md", REPO_DIR / "receiver" / "receiver.py",
-                 REPO_DIR / "receiver" / "views.sql", REPO_DIR / "docker-compose.yml",
+    for path in [REPO_DIR / "README.md", REPO_DIR / "docs" / "views.md",
+                 REPO_DIR / "receiver" / "receiver.py", REPO_DIR / "receiver" / "views.sql",
+                 REPO_DIR / "docker-compose.yml",
                  REPO_DIR / "tools" / "sample_data.py", REPO_DIR / "tools" / "upgrade-postgres.sh",
                  REPO_DIR / "tools" / "pg-guard.sh", REPO_DIR / ".env.example",
+                 REPO_DIR / "docker-compose.build.yml", REPO_DIR / "CHANGELOG.md",
+                 REPO_DIR / "docs" / "compatibility.md", REPO_DIR / "docs" / "releasing.md",
+                 REPO_DIR / "scripts" / "prepare-release.sh", REPO_DIR / ".githooks" / "pre-push",
+                 *(REPO_DIR / ".github" / "workflows").glob("*.yml"),
+                 *REPO_DIR.glob("*/Dockerfile"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql")]:
         text = path.read_text()
         assert "\u2013" not in text and "\u2014" not in text, path

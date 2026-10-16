@@ -1,9 +1,17 @@
+# The receiver, plus the sample data script for the demo profile.
+# Build from the repository root: docker build -f receiver/Dockerfile .
 FROM python:3.14.8-slim
+LABEL org.opencontainers.image.title="Life Dashboard receiver" \
+      org.opencontainers.image.description="Takes signed payloads from the Life Dashboard Companion apps and stores them in Postgres" \
+      org.opencontainers.image.source="https://github.com/owen282000/life-dashboard-stack" \
+      org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
-COPY requirements.txt .
+COPY receiver/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY receiver.py views.sql ./
-COPY migrations ./migrations
+COPY receiver/receiver.py receiver/views.sql ./
+COPY receiver/migrations ./migrations
+# The demo profile runs: python tools/sample_data.py
+COPY tools/sample_data.py ./tools/
 EXPOSE 8080
 CMD ["python", "receiver.py"]
