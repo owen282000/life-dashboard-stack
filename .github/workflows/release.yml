@@ -1,0 +1,137 @@
+name: release
+
+# A version tag (1.2.3, no prefix) publishes the receiver, grafana and db images to GHCR
+# for amd64 and arm64, tagged 1.2.3, 1.2, 1 and latest, with build provenance and an SBOM.
+# Then it creates the GitHub release with docker-compose.yml and env.example attached and
+# the version's section of CHANGELOG.md as the notes. Installs download those two files
+# from the latest release, so the compose file has to point at the tagged version.
+
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+
+env:
+  TAG: ${{ github.ref_name }}
+
+jobs:
+  check:
+    name: Check the version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: docker-compose.yml uses the tagged version
+        run: |
+          n=$(grep -cF ":\${LIFEDASH_VERSION:-$TAG}" docker-compose.yml || true)
+          if [ "$n" != 4 ]; then
+            echo "docker-compose.yml should default all four images to $TAG (found $n):"
+            grep -n "image:" docker-compose.yml
+            exit 1
+          fi
+      - name: CHANGELOG.md has a section for the version
+        run: |
+          awk -v v="$TAG" '/^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } } found && !/^\[.+\]: http/' \
+            CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section '## [$TAG]', or it is empty"
+            exit 1
+          fi
+          cat notes.md
+
+  images:
+    name: Publish ${{ matrix.image }}
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: receiver
+            title: Life Dashboard receiver
+            description: Takes signed payloads from the Life Dashboard Companion apps and stores them in Postgres
+          - image: grafana
+            title: Life Dashboard Grafana
+            description: Grafana with the six Life Dashboard dashboards and the Postgres data source provisioned
+          - image: db
+            title: Life Dashboard database
+            description: Postgres for the Life Dashboard Stack, with a guard for data left in a Postgres 16 volume
+    env:
+      IMAGE: ghcr.io/owen282000/life-dashboard-${{ matrix.image }}
+      # GHCR shows the description of a multi-arch image from the index annotation.
+      DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          flavor: latest=true
+          labels: |
+            org.opencontainers.image.title=${{ matrix.title }}
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.licenses=MIT
+          annotations: |
+            org.opencontainers.image.title=${{ matrix.title }}
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.licenses=MIT
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.image }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      # A signed GitHub attestation as well, checked with: gh attestation verify oci://<image> -R owen282000/life-dashboard-stack
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    name: Create the release
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # GitHub renames release assets that start with a dot, so .env.example goes up as
+      # env.example.
+      - name: Create the release with docker-compose.yml and env.example
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          awk -v v="$TAG" '/^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } } found && !/^\[.+\]: http/' \
+            CHANGELOG.md > notes.md
+          cp .env.example env.example
+          gh release create "$TAG" docker-compose.yml env.example \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md
