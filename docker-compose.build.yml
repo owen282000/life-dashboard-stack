@@ -1,4 +1,4 @@
-# Build the three images from this repository instead of pulling them:
+# Build the images from this repository instead of pulling them:
 #
 #     docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 #
@@ -33,4 +33,11 @@ services:
     build:
       context: .
       dockerfile: receiver/Dockerfile
+    pull_policy: build
+
+  mcp:
+    image: life-dashboard-mcp:local
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
     pull_policy: build

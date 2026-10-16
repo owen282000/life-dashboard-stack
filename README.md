@@ -68,6 +68,8 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 - [Backups](#backups)
 - [Exposing it safely](#exposing-it-safely)
 - [Write your own query](#write-your-own-query)
+- [Read your data back](#read-your-data-back)
+- [Ask your own AI (MCP)](#ask-your-own-ai-mcp)
 - [Build from source](#build-from-source)
 - [Known gaps](#known-gaps)
 
@@ -311,9 +313,32 @@ Run them with `docker compose exec db psql -U lifedash`, or in a Grafana panel o
 
 The receiver drops and rebuilds the `dash` schema at every start, so keep views of your own in the `public` schema. The raw records stay in `records`, one row per record with the whole record as JSON in `data`. Every field of every type is in the Android app's [payload reference](https://github.com/owen282000/life-dashboard-companion-app/blob/main/docs/webhook.md), and the [iOS payload page](https://github.com/owen282000/life-dashboard-companion-app-ios/blob/main/docs/webhook.md) lists where an iPhone differs.
 
+## Read your data back
+
+The receiver can also answer: a read-only JSON API under `/api/`, for a script, a widget or a spreadsheet of your own. It's off until you set `API_TOKEN` in `.env` to a long random string (`openssl rand -hex 32`) and restart. Then:
+
+```bash
+curl -H "Authorization: Bearer $API_TOKEN" "http://localhost:8080/api/days?from=2026-10-01&to=2026-10-07&phone=pixel"
+```
+
+There are endpoints for the phones, totals per day, nights, workouts, screen time, one metric per day, and a trend against the period before. Days are local days in your `TZ`, as in the dashboards. The API reads only the `dash` views, as `dash_ro`, a database user that can't write and can't see the raw payloads. [docs/api.md](docs/api.md) lists every endpoint with an example.
+
+The API shares the receiver's port. If a reverse proxy makes the receiver reachable from the internet, the API is reachable there too, behind its token; forward only `/webhook` if you don't need it outside.
+
+## Ask your own AI (MCP)
+
+An optional MCP server, a fourth image, lets a model you choose read your history and answer questions like "did I sleep longer in the weeks I ran more?". It has six read-only tools (phones, days, nights, workouts, a trend, screen time) on the same queries as the API, and no tool that writes or takes SQL. Set `MCP_TOKEN` in `.env` and start it with its profile:
+
+```bash
+docker compose --profile mcp up -d
+```
+
+It serves Streamable HTTP at `http://<address of this machine>:8090/mcp` with the token as a bearer token, for Open WebUI, LM Studio or any MCP client, and stdio for Claude Desktop on the same machine. [docs/mcp.md](docs/mcp.md) has the setup for each, including a local model through Ollama.
+
+The stack sends nothing to any AI by itself. With a local model everything stays on your hardware. With a cloud model, Claude Desktop included, your questions and every result the model asks for go to that provider.
 ## Build from source
 
-To change the receiver, the views or the dashboards, clone the repository and let Compose build the three images from it:
+To change the receiver, the views or the dashboards, clone the repository and let Compose build the images from it:
 
 ```bash
 git clone https://github.com/owen282000/life-dashboard-stack
@@ -327,11 +352,12 @@ In `.env`, set `WEBHOOK_SECRET` and the rest as in the [Quick start](#quick-star
 docker compose up -d --build
 ```
 
-Run the same command after every change. Without the `COMPOSE_FILE` line, `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` does the same. The receiver's tests start their own Postgres in Docker:
+Run the same command after every change. Without the `COMPOSE_FILE` line, `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` does the same. The tests of the receiver and the MCP server start their own Postgres in Docker:
 
 ```bash
-pip install -r receiver/requirements-dev.txt
+pip install -r receiver/requirements-dev.txt -r mcp/requirements-dev.txt
 python -m pytest -q receiver/tests
+python -m pytest -q mcp/tests
 ```
 
 ## Known gaps
@@ -347,7 +373,7 @@ python -m pytest -q receiver/tests
 - [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) for Android 1.23.0: Health Connect and Screen Time payloads.
 - [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios) 1.6.0: Apple Health payloads.
 
-Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. The versions are pinned in the Dockerfiles of the three images and in the receiver's `requirements.txt`, and Dependabot proposes updates. Each release publishes them as new images.
+Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. The versions are pinned in the Dockerfiles of the images and in the `requirements.txt` of the receiver and the MCP server, and Dependabot proposes updates. Each release publishes them as new images.
 
 ## Help
 

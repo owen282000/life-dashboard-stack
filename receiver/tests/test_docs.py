@@ -43,6 +43,19 @@ def test_no_long_dashes_in_shipped_text():
                  REPO_DIR / "scripts" / "prepare-release.sh", REPO_DIR / ".githooks" / "pre-push",
                  *(REPO_DIR / ".github" / "workflows").glob("*.yml"),
                  *REPO_DIR.glob("*/Dockerfile"),
+                 REPO_DIR / "receiver" / "api.py", REPO_DIR / "receiver" / "queries.py",
+                 REPO_DIR / "docs" / "api.md", REPO_DIR / "docs" / "mcp.md",
+                 *(REPO_DIR / "mcp").rglob("*.py"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql")]:
         text = path.read_text()
         assert "\u2013" not in text and "\u2014" not in text, path
+
+
+def test_api_md_lists_every_endpoint_and_metric():
+    import api
+    import queries
+    text = (REPO_DIR / "docs" / "api.md").read_text()
+    for route in api.ROUTES:
+        assert re.search(rf"^### `GET {re.escape(route)}`", text, re.M), f"{route} is not in docs/api.md"
+    for metric in queries.METRICS:
+        assert f"| `{metric}` |" in text, f"metric {metric} is not in docs/api.md"

@@ -1,8 +1,8 @@
 version: 2
 updates:
-  # The base images of the three published images: python, grafana/grafana and postgres.
+  # The base images of the published images: python, grafana/grafana and postgres.
   - package-ecosystem: docker
-    directories: ["/receiver", "/grafana", "/db"]
+    directories: ["/receiver", "/grafana", "/db", "/mcp"]
     schedule:
       interval: weekly
     groups:
@@ -15,7 +15,7 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
-    directory: /receiver
+    directories: ["/receiver", "/mcp"]
     schedule:
       interval: weekly
     groups:

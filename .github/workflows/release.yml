@@ -1,6 +1,6 @@
 name: release
 
-# A version tag (1.2.3, no prefix) publishes the receiver, grafana and db images to GHCR
+# A version tag (1.2.3, no prefix) publishes the receiver, grafana, db and mcp images to GHCR
 # for amd64 and arm64, tagged 1.2.3, 1.2, 1 and latest, with build provenance and an SBOM.
 # Then it creates the GitHub release with docker-compose.yml and env.example attached and
 # the version's section of CHANGELOG.md as the notes. Installs download those two files
@@ -38,8 +38,8 @@ jobs:
       - name: docker-compose.yml uses the tagged version
         run: |
           n=$(grep -cF ":\${LIFEDASH_VERSION:-$TAG}" docker-compose.yml || true)
-          if [ "$n" != 4 ]; then
-            echo "docker-compose.yml should default all four images to $TAG (found $n):"
+          if [ "$n" != 5 ]; then
+            echo "docker-compose.yml should default all five image lines to $TAG (found $n):"
             grep -n "image:" docker-compose.yml
             exit 1
           fi
@@ -75,6 +75,9 @@ jobs:
           - image: db
             title: Life Dashboard database
             description: Postgres for the Life Dashboard Stack, with a guard for data left in a Postgres 16 volume
+          - image: mcp
+            title: Life Dashboard MCP server
+            description: Read-only MCP server that lets a model of your choice read the Life Dashboard views
     env:
       IMAGE: ghcr.io/owen282000/life-dashboard-${{ matrix.image }}
       # GHCR shows the description of a multi-arch image from the index annotation.

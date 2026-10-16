@@ -16,11 +16,12 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14.8"
-      - run: pip install -r receiver/requirements-dev.txt
+      - run: pip install -r receiver/requirements-dev.txt -r mcp/requirements-dev.txt
       # The tests start their own Postgres container from the image in db/Dockerfile.
       - run: python -m pytest -q receiver/tests
-      - run: docker compose config --quiet
-      - run: docker compose -f docker-compose.yml -f docker-compose.build.yml config --quiet
+      - run: python -m pytest -q mcp/tests
+      - run: docker compose --profile demo --profile mcp config --quiet
+      - run: docker compose -f docker-compose.yml -f docker-compose.build.yml --profile demo --profile mcp config --quiet
 
   # Every image for both architectures, without pushing, so a broken Dockerfile fails here
   # and not on the release tag.
@@ -29,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [receiver, grafana, db]
+        image: [receiver, grafana, db, mcp]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -44,18 +45,21 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   # The whole stack built from this commit, with the sample data: the receiver answers,
-  # Grafana provisions all six dashboards and grafana_ro can read the dash views.
+  # Grafana provisions all six dashboards, grafana_ro can read the dash views, and the API
+  # and the MCP server answer with their tokens and refuse without them.
   stack:
     runs-on: ubuntu-latest
     env:
       COMPOSE_FILE: docker-compose.yml:docker-compose.build.yml
-      COMPOSE_PROFILES: demo
+      COMPOSE_PROFILES: demo,mcp
       WEBHOOK_SECRET: ci-secret
+      API_TOKEN: ci-api-token-0123456789
+      MCP_TOKEN: ci-mcp-token-0123456789
       GRAFANA_DB_PASSWORD: ci-ro
       GRAFANA_PASSWORD: ci-admin
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: docker compose up -d --build --wait db receiver grafana
+      - run: docker compose up -d --build --wait db receiver grafana mcp
       - name: Load the sample data
         run: docker compose run --rm demo
       - name: Check the receiver, Grafana and grafana_ro
@@ -69,6 +73,15 @@ jobs:
           [ "$n" = 6 ]
           docker compose exec -T -e PGPASSWORD=ci-ro db psql -h 127.0.0.1 -U grafana_ro -d lifedash -v ON_ERROR_STOP=1 -XAt \
             -c "SELECT count(*) FROM dash.activity_days" -c "SELECT count(*) FROM dash.screen_apps"
+      - name: Check the API and the MCP server
+        run: |
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/phones)" = 401 ]
+          curl -fsS -H "Authorization: Bearer $API_TOKEN" http://127.0.0.1:8080/api/phones | jq -e '.phones | length == 2'
+          curl -fsS http://127.0.0.1:8090/health
+          list='{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -d "$list" http://127.0.0.1:8090/mcp)" = 401 ]
+          curl -fsS -X POST -H "Authorization: Bearer $MCP_TOKEN" -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' -d "$list" http://127.0.0.1:8090/mcp | grep -q daily_summary
       - if: failure()
         run: docker compose logs
       - if: always()

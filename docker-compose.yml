@@ -1,9 +1,10 @@
 # Life Dashboard Stack: receiver, Postgres and Grafana.
-# Settings come from .env (see .env.example). This file is all you need: the three images
+# Settings come from .env (see .env.example). This file is all you need: the images
 # are published on ghcr.io for amd64 and arm64.
 #   Start:         docker compose up -d
 #   Upgrade:       set LIFEDASH_VERSION in .env, then docker compose pull && docker compose up -d
 #   Sample data:   docker compose --profile demo up -d
+#   MCP server:    docker compose --profile mcp up -d (docs/mcp.md)
 #   From source:   docker-compose.build.yml in the repository builds the images instead
 
 services:
@@ -38,6 +39,9 @@ services:
       PAIRING_LOG: ${PAIRING_LOG:-1}
       PAIRING_PAGE: ${PAIRING_PAGE:-1}
       PAIRING_TOKEN: ${PAIRING_TOKEN:-}
+      # The read-only API under /api/ is off while API_TOKEN is empty. docs/api.md
+      API_TOKEN: ${API_TOKEN:-}
+      DASH_DB_PASSWORD: ${DASH_DB_PASSWORD:-lifedash-dash-ro}
     ports:
       - "${RECEIVER_PORT:-8080}:8080"
     depends_on:
@@ -89,6 +93,30 @@ services:
       receiver:
         condition: service_healthy
     restart: "no"
+
+  # Read-only MCP server for a model of your choice. Only with --profile mcp. docs/mcp.md
+  mcp:
+    profiles: ["mcp"]
+    image: ghcr.io/owen282000/life-dashboard-mcp:${LIFEDASH_VERSION:-1.0.0}
+    init: true
+    environment:
+      MCP_TOKEN: ${MCP_TOKEN:-}
+      PGHOST: db
+      PGDATABASE: lifedash
+      PGUSER: dash_ro
+      PGPASSWORD: ${DASH_DB_PASSWORD:-lifedash-dash-ro}
+    ports:
+      - "${MCP_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+    depends_on:
+      receiver:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:
