@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/owen282000/life-dashboard-stack/releases/latest"><img src="https://img.shields.io/github/v/release/owen282000/life-dashboard-stack" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT license"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker%20Compose-3%20services-2496ED" alt="Docker Compose with three services"></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Postgres-18-4169E1" alt="Postgres 18"></a>
@@ -62,10 +63,12 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 - [Quick start](#quick-start)
 - [Dashboards](#dashboards)
 - [Several phones](#several-phones)
-- [Upgrading from an earlier version](#upgrading-from-an-earlier-version)
+- [Upgrading](#upgrading)
+- [Upgrading from a version before 1.0.0](#upgrading-from-a-version-before-100)
 - [Backups](#backups)
 - [Exposing it safely](#exposing-it-safely)
 - [Write your own query](#write-your-own-query)
+- [Build from source](#build-from-source)
 - [Known gaps](#known-gaps)
 
 ## What you get
@@ -74,14 +77,16 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 - **Postgres 18.** One `records` table with a JSONB column, so all 33 record types of the Android app and the 28 of the iPhone app fit without schema changes. On top of it sits a schema of plain SQL views, `dash`, that turns raw records into days, nights, hours and apps in your time zone. [docs/views.md](docs/views.md) documents them.
 - **Grafana 13.2.** Six provisioned dashboards in a **Life Dashboard** folder, with the overview as the home page. Grafana reads the database as `grafana_ro`, a user that can only `SELECT`.
 
+Each part is an image on `ghcr.io` for amd64 and arm64 (`life-dashboard-receiver`, `life-dashboard-db` and `life-dashboard-grafana`), so you don't need a clone or a build. Releases have version numbers, and within one major version nothing you build on changes: [docs/compatibility.md](docs/compatibility.md) lists what stays the same.
+
 ## Try it without a phone
 
-The `demo` profile adds a one-off service that posts 60 days of made-up data for two phones, `demo-android` and `demo-iphone`, through the real receiver. Run it under its own project name and ports, so it never touches your own data:
+The `demo` profile adds a one-off service that posts 60 days of made-up data for two phones, `demo-android` and `demo-iphone`, through the real receiver. All it needs is the compose file. Run it under its own project name and ports, so it never touches your own data:
 
 ```bash
-git clone https://github.com/owen282000/life-dashboard-stack
-cd life-dashboard-stack
-RECEIVER_PORT=18080 GRAFANA_PORT=13000 docker compose -p lifedash-demo --profile demo up -d --build
+mkdir lifedash-demo && cd lifedash-demo
+curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
+RECEIVER_PORT=18080 GRAFANA_PORT=13000 docker compose -p lifedash-demo --profile demo up -d
 ```
 
 Give it a minute, then open `http://localhost:13000` and log in as `admin` with the password `lifedash` (or your `GRAFANA_PASSWORD`, if the folder already has a `.env`). Pick a **Phone** at the top of a dashboard to switch between the two. When you're done, remove all of it, volumes included:
@@ -111,26 +116,33 @@ The data can also go to an MQTT broker or a webhook of your own instead. Both ap
 
 ## Quick start
 
-You need Docker with Compose, and a phone that can reach the machine that runs the stack (the same network, or a VPN).
+You need Docker with Compose, and a phone that can reach the machine that runs the stack (the same network, or a VPN). There's nothing to clone or build: two files from the latest release are enough.
 
-```bash
-git clone https://github.com/owen282000/life-dashboard-stack
-cd life-dashboard-stack
-cp .env.example .env
-```
+1. Make a folder and download `docker-compose.yml` and the example settings into it:
 
-Open `.env` and set:
+   ```bash
+   mkdir life-dashboard && cd life-dashboard
+   curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
+   curl -fsSL -o .env https://github.com/owen282000/life-dashboard-stack/releases/latest/download/env.example
+   ```
+
+2. Open `.env` and set the secret, your time zone and the two passwords, as described below.
+3. Start it:
+
+   ```bash
+   docker compose up -d
+   ```
+
+The settings in `.env`:
 
 - `WEBHOOK_SECRET`: a long random string, for example the output of `openssl rand -hex 32`. You paste the same value into the app.
 - `TZ`: your time zone as an IANA name, such as `Europe/Amsterdam` or `America/New_York`. Days, nights and hours in the dashboards follow it. The receiver refuses to start with a name Postgres doesn't know.
 - `GRAFANA_PASSWORD`: the password of Grafana's `admin` user.
 - `GRAFANA_DB_PASSWORD`: the password of `grafana_ro`, the read-only database user Grafana connects with.
 
-Ports 8080 or 3000 already taken? Change `RECEIVER_PORT` or `GRAFANA_PORT` in `.env` and use those ports below. Then start it:
+Ports 8080 or 3000 already taken? Change `RECEIVER_PORT` or `GRAFANA_PORT` in `.env` and use those ports below. After a change to `.env`, run `docker compose up -d` again.
 
-```bash
-docker compose up -d --build
-```
+The folder name is the Compose project name, which is part of the volume names that hold your data. Keep the folder, or set `COMPOSE_PROJECT_NAME` in `.env` when you move it.
 
 ### Connect a phone
 
@@ -186,7 +198,7 @@ A few choices hold on every dashboard:
 - Goals are dashed lines you can change at the top of the dashboard. Nothing is colored as good or bad, and there are no scores. The only red is the time since the last sync, on the overview and on **Data and sync**, when a phone has sent nothing for 24 hours.
 - A missing day is a gap, not a zero.
 
-The dashboards are provisioned from `grafana/dashboards/life-dashboard/`, so Grafana won't save changes over them. To change one, use **Save as** to make a copy, or edit the JSON file.
+The dashboards are built into the Grafana image, so Grafana won't save changes over them and an upgrade brings the new versions along. To change one, use **Save as** to make a copy; the copy is yours and an upgrade leaves it alone. To change the originals, edit the JSON in `grafana/dashboards/life-dashboard/` and [build from source](#build-from-source).
 
 ## Several phones
 
@@ -194,15 +206,25 @@ Give every phone its own label: `/webhook/pixel`, `/webhook/iphone`, `/webhook/p
 
 Two phones that share one label do get in each other's way: the daily totals of the one that syncs last replace the other's. Screen time is still kept per phone model.
 
-## Upgrading from an earlier version
+## Upgrading
 
-Earlier versions of this stack ran Postgres 16. Postgres 18 can't open that data directory, so the data moves over once with a dump and a restore. Until then the database refuses to start, and `docker compose logs db` shows:
+The `docker-compose.yml` of a release starts the images of that release. To move to a newer one, set `LIFEDASH_VERSION` in `.env` to its number from the [releases](https://github.com/owen282000/life-dashboard-stack/releases), then:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+To follow every 1.x release, set `LIFEDASH_VERSION=1` once; from then on those two commands are the whole upgrade. A 1.x release never breaks what you built on the stack, see [docs/compatibility.md](docs/compatibility.md), and the [changelog](CHANGELOG.md) says what's new. When a release adds something to `docker-compose.yml` itself, its notes say so; download that file again then, and keep your `.env`.
+
+## Upgrading from a version before 1.0.0
+
+Versions before 1.0.0 were built from a clone and ran Postgres 16. Postgres 18 can't open that data directory, so the data moves over once with a dump and a restore. Until then the database refuses to start, and `docker compose logs db` shows:
 
 ```
 Life Dashboard: your data is still in the Postgres 16 volume.
 ```
 
-To upgrade:
+To upgrade in your clone:
 
 ```bash
 git pull
@@ -211,7 +233,15 @@ tools/upgrade-postgres.sh life-dashboard-stack
 
 The argument is the Compose project name: the folder name, unless you started the stack with `-p` or set `COMPOSE_PROJECT_NAME`. Without an argument the script uses the same default. The script checks that the new volume is still empty, stops the stack, dumps the old database to `backups/`, restores it into a new volume, compares the row count of every table, and only then marks the new volume as ready. It starts the stack again at the end. On its first start the receiver brings the old rows up to date: they become the phone `default`, and a day that older versions stored several times keeps only its latest figure. If an Android phone and an iPhone both sent to the old stack, they now share that label, so on days that both of them sent, the dashboards show the daily totals of one of them. Give each phone its own label from then on, as in [Several phones](#several-phones).
 
-The old volume is never written to. To go back, check out the last version on Postgres 16 and start it. Keep `--build`: without it Compose reuses the new receiver's image, which would migrate the old database.
+You can also leave the clone behind and use the release files from the [Quick start](#quick-start). Put them in a new folder, copy your settings from the old `.env`, and add `COMPOSE_PROJECT_NAME=life-dashboard-stack` (the clone's folder name), so Compose finds the volumes that hold your data. The db image has a copy of the upgrade script. In the new folder:
+
+```bash
+docker compose run --rm --no-deps -T --entrypoint cat db \
+    /usr/local/share/life-dashboard/upgrade-postgres.sh > upgrade-postgres.sh
+sh upgrade-postgres.sh
+```
+
+The old volume is never written to. To go back, check out the last version on Postgres 16 in the clone and start it. Keep `--build`, so the receiver of that version is built and used:
 
 ```bash
 git checkout f4e9795
@@ -264,6 +294,29 @@ Run them with `docker compose exec db psql -U lifedash`, or in a Grafana panel o
 
 The receiver drops and rebuilds the `dash` schema at every start, so keep views of your own in the `public` schema. The raw records stay in `records`, one row per record with the whole record as JSON in `data`. Every field of every type is in the Android app's [payload reference](https://github.com/owen282000/life-dashboard-companion-app/blob/main/docs/webhook.md), and the [iOS payload page](https://github.com/owen282000/life-dashboard-companion-app-ios/blob/main/docs/webhook.md) lists where an iPhone differs.
 
+## Build from source
+
+To change the receiver, the views or the dashboards, clone the repository and let Compose build the three images from it:
+
+```bash
+git clone https://github.com/owen282000/life-dashboard-stack
+cd life-dashboard-stack
+cp .env.example .env
+```
+
+In `.env`, set `WEBHOOK_SECRET` and the rest as in the [Quick start](#quick-start), and remove the `#` in front of `COMPOSE_FILE=docker-compose.yml:docker-compose.build.yml`. Every `docker compose` command in that folder then builds the images from your clone, tagged `:local`, instead of pulling them:
+
+```bash
+docker compose up -d --build
+```
+
+Run the same command after every change. Without the `COMPOSE_FILE` line, `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build` does the same. The receiver's tests start their own Postgres in Docker:
+
+```bash
+pip install -r receiver/requirements-dev.txt
+python -m pytest -q receiver/tests
+```
+
 ## Known gaps
 
 - Series the Android app sends per time window (**Data Resolution** set to anything but **Every record**) are stored in a `buckets` table, but only the heart rate panels read them so far. For steps, HRV, SpO2 and the other series, leave **Data Resolution** on **Every record**, the default. Steps, distance and calories per day come from the daily totals and aren't affected.
@@ -277,7 +330,7 @@ The receiver drops and rebuilds the `dash` schema at every start, so keep views 
 - [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) for Android 1.23.0: Health Connect and Screen Time payloads.
 - [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios) 1.6.0: Apple Health payloads.
 
-Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. The versions are pinned in `docker-compose.yml` and in the receiver's `Dockerfile` and `requirements.txt`, and Dependabot proposes updates.
+Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. The versions are pinned in the Dockerfiles of the three images and in the receiver's `requirements.txt`, and Dependabot proposes updates. Each release publishes them as new images.
 
 ## Help
 
