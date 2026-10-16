@@ -1,0 +1,132 @@
+# Every option that renders something: three instances, WAL volume, backups to S3 compatible
+# storage, Ingress and Gateway API routes, PodDisruptionBudgets and NetworkPolicies.
+image:
+  tag: "1.0.0"
+imagePullSecrets:
+  - name: regcred
+timezone: America/New_York
+secrets:
+  pairingToken: a-long-pairing-token-for-ci
+receiver:
+  replicas: 2
+  publicUrl: https://lifedash.example.com
+  pairing:
+    page: true
+  api:
+    enabled: true
+  expose:
+    webhook: true
+    api: true
+    pair: true
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    hosts: [lifedash.example.com]
+    tls:
+      - secretName: lifedash-tls
+        hosts: [lifedash.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gateway
+        namespace: gateway-system
+        sectionName: https
+    hostnames: [lifedash.example.com]
+  podDisruptionBudget:
+    enabled: true
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: receiver
+grafana:
+  rootUrl: https://grafana.example.com/
+  ingress:
+    enabled: true
+    className: nginx
+    hosts: [grafana.example.com]
+    tls:
+      - secretName: grafana-tls
+        hosts: [grafana.example.com]
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: gateway
+        namespace: gateway-system
+    hostnames: [grafana.example.com]
+mcp:
+  enabled: true
+  replicas: 2
+  podDisruptionBudget:
+    enabled: true
+postgres:
+  mode: cnpg
+  cnpg:
+    instances: 3
+    storage:
+      size: 10Gi
+      storageClass: fast
+    walStorage:
+      enabled: true
+    parameters:
+      max_connections: 100
+      shared_buffers: 256MB
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
+    affinity:
+      enablePodAntiAffinity: true
+      topologyKey: kubernetes.io/hostname
+      podAntiAffinityType: required
+    backup:
+      enabled: true
+      serverName: lifedash-2026
+      objectStore:
+        configuration:
+          destinationPath: s3://lifedash-backups/
+          endpointURL: https://s3.example.com
+          s3Credentials:
+            accessKeyId:
+              name: backup-credentials
+              key: ACCESS_KEY_ID
+            secretAccessKey:
+              name: backup-credentials
+              key: ACCESS_SECRET_KEY
+          wal:
+            compression: gzip
+          data:
+            compression: gzip
+networkPolicy:
+  enabled: true
+  receiver:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+  grafana:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+  grafanaEgress:
+    - ports:
+        - port: 587
+          protocol: TCP
+  postgres:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: tools
+    extraIngress:
+      - ports:
+          - port: 9187
+            protocol: TCP
+        from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: monitoring

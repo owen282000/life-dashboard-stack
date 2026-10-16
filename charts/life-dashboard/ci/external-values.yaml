@@ -1,0 +1,23 @@
+# Your own Postgres: the owner's URL from a Secret, all other secrets from another one.
+secrets:
+  existingSecret: lifedash-secrets
+receiver:
+  api:
+    enabled: true
+mcp:
+  enabled: true
+postgres:
+  mode: external
+  external:
+    existingSecret: lifedash-database
+    host: postgres.databases.svc.cluster.local
+    port: 5432
+    database: lifedash
+    sslmode: disable
+networkPolicy:
+  enabled: true
+  externalDatabase:
+    to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: databases

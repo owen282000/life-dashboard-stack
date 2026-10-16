@@ -14,10 +14,10 @@ import sys
 from urllib.parse import parse_qs, urlsplit
 
 import psycopg
-from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
 import queries
+import roles
 
 ROLE = "dash_ro"
 MIN_TOKEN_LENGTH = 16
@@ -36,6 +36,7 @@ def _token_from_env() -> tuple[str, str | None]:
 
 API_TOKEN, TOKEN_WARNING = _token_from_env()
 DASH_DB_PASSWORD = os.environ.get("DASH_DB_PASSWORD", "") or "lifedash-dash-ro"
+SETTINGS = {"statement_timeout": queries.STATEMENT_TIMEOUT, "default_transaction_read_only": "on"}
 
 
 def dsn(owner_dsn: str, password: str = DASH_DB_PASSWORD) -> str:
@@ -44,16 +45,12 @@ def dsn(owner_dsn: str, password: str = DASH_DB_PASSWORD) -> str:
 
 
 def setup_role(conn, password: str = DASH_DB_PASSWORD) -> None:
-    """dash_ro: log in, SELECT on the dash views, nothing else. Runs after the views rebuild."""
+    """dash_ro: log in, SELECT on the dash views, nothing else. Runs after the views rebuild.
+
+    Where the receiver's user may not manage roles, dash_ro must exist already (roles.py).
+    """
     with conn.transaction():
-        if conn.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (ROLE,)).fetchone() is None:
-            conn.execute(sql.SQL("CREATE ROLE {}").format(sql.Identifier(ROLE)))
-        conn.execute(
-            sql.SQL("ALTER ROLE {} WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION"
-                    " NOBYPASSRLS PASSWORD {}").format(sql.Identifier(ROLE), sql.Literal(password))
-        )
-        conn.execute(f"ALTER ROLE {ROLE} SET statement_timeout = '{queries.STATEMENT_TIMEOUT}'")
-        conn.execute(f"ALTER ROLE {ROLE} SET default_transaction_read_only = on")
+        roles.ensure_login_role(conn, ROLE, password, SETTINGS, "DASH_DB_PASSWORD")
         conn.execute(f"REVOKE ALL ON records, buckets, payloads, schema_migrations, tombstones FROM {ROLE}")
         conn.execute(f"GRANT USAGE ON SCHEMA dash TO {ROLE}")
         conn.execute(f"GRANT SELECT ON ALL TABLES IN SCHEMA dash TO {ROLE}")

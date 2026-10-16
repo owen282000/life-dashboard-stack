@@ -1,0 +1,46 @@
+{{- range $component := list "receiver" "grafana" }}
+{{- $v := index $.Values $component }}
+{{- if $v.ingress.enabled }}
+{{- $paths := include "life-dashboard.routePaths" (list $ $component) | fromJsonArray }}
+{{- if not $paths }}
+{{- fail "receiver.ingress is enabled, but receiver.expose opens no path" }}
+{{- end }}
+{{- if not $v.ingress.hosts }}
+{{- fail (printf "%s.ingress.hosts is empty" $component) }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "life-dashboard.componentName" (list $ $component) }}
+  labels:
+    {{- include "life-dashboard.labels" (list $ $component) | nindent 4 }}
+  {{- with $v.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $v.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $v.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $host := $v.ingress.hosts }}
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          {{- range $path := $paths }}
+          - path: {{ $path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "life-dashboard.componentName" (list $ $component) }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

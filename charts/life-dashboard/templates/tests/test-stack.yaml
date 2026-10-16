@@ -1,0 +1,139 @@
+{{- $secret := include "life-dashboard.secretName" . }}
+{{- $receiver := printf "http://%s:%v" (include "life-dashboard.componentName" (list . "receiver")) .Values.receiver.service.port }}
+{{- $grafana := printf "http://%s:%v" (include "life-dashboard.componentName" (list . "grafana")) .Values.grafana.service.port }}
+{{- $mcp := printf "http://%s:%v" (include "life-dashboard.componentName" (list . "mcp")) .Values.mcp.service.port }}
+# helm test: the receiver, Grafana with its dashboards and data source, and the API and the
+# MCP server when they are on. Each pod prints what it checked.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "test-receiver") }}
+  labels:
+    {{- include "life-dashboard.selectorLabels" (list . "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  {{- $env := printf `- name: URL
+  value: %q
+- name: PAIRING_PAGE
+  value: %q` $receiver (ternary "1" "0" .Values.receiver.pairing.page) }}
+  {{- $script := printf `%s
+
+url = os.environ["URL"]
+status, body = fetch(url + "/health")
+check(status == 200 and json.loads(body)["status"] == "ok", "the receiver is healthy: GET /health is 200")
+status, _ = fetch(url + "/webhook/helm-test", {"Content-Type": "application/json", "X-Signature": "sha256=0"}, b"{}")
+check(status == 401, "a payload with a wrong signature is refused with 401 (got %%s)" %% status)
+status, _ = fetch(url + "/pair")
+want = 200 if os.environ["PAIRING_PAGE"] == "1" else 404
+check(status == want, "/pair from inside the cluster answers %%s (got %%s)" %% (want, status))
+` (include "life-dashboard.pyHelpers" .) }}
+  {{- include "life-dashboard.toolPodSpec" (list . "test" $env $script) | nindent 2 }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "test-grafana") }}
+  labels:
+    {{- include "life-dashboard.selectorLabels" (list . "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  {{- $env := printf `- name: URL
+  value: %q
+- name: ADMIN_USER
+  value: %q
+- name: ADMIN_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: %s
+      key: GRAFANA_PASSWORD` $grafana .Values.grafana.adminUser $secret }}
+  {{- $script := printf `%s
+
+url = os.environ["URL"]
+auth = {"Authorization": "Basic " + base64.b64encode(
+    (os.environ["ADMIN_USER"] + ":" + os.environ["ADMIN_PASSWORD"]).encode()).decode()}
+status, body = fetch(url + "/api/health")
+check(status == 200 and json.loads(body).get("database") == "ok", "Grafana is healthy: GET /api/health")
+for _ in range(30):
+    status, body = fetch(url + "/api/search?type=dash-db", auth)
+    titles = sorted(d["title"] for d in json.loads(body)) if status == 200 else []
+    if len(titles) == 6:
+        break
+    time.sleep(2)
+check(len(titles) == 6, "Grafana lists the six dashboards: " + ", ".join(titles))
+status, body = fetch(url + "/api/datasources/uid/lifedash-postgres/health", auth)
+check(status == 200 and json.loads(body).get("status") == "OK",
+      "the LifeDashboard Postgres data source connects as grafana_ro: " + body.strip())
+` (include "life-dashboard.pyHelpers" .) }}
+  {{- include "life-dashboard.toolPodSpec" (list . "test" $env $script) | nindent 2 }}
+{{- if .Values.receiver.api.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "test-api") }}
+  labels:
+    {{- include "life-dashboard.selectorLabels" (list . "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  {{- $env := printf `- name: URL
+  value: %q
+- name: DEMO
+  value: %q
+- name: API_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: %s
+      key: API_TOKEN` $receiver (ternary "1" "0" .Values.demo.enabled) $secret }}
+  {{- $script := printf `%s
+
+url = os.environ["URL"] + "/api/phones"
+status, _ = fetch(url)
+check(status == 401, "the API refuses a request without its token (got %%s)" %% status)
+status, body = fetch(url, {"Authorization": "Bearer " + os.environ["API_TOKEN"]})
+check(status == 200, "the API answers with its token: GET /api/phones is %%s" %% status)
+phones = sorted(p["phone"] for p in json.loads(body)["phones"])
+print("     phones: " + (", ".join(phones) or "none yet"))
+if os.environ["DEMO"] == "1":
+    check({"demo-android", "demo-iphone"} <= set(phones), "the demo data landed for both phones")
+` (include "life-dashboard.pyHelpers" .) }}
+  {{- include "life-dashboard.toolPodSpec" (list . "test" $env $script) | nindent 2 }}
+{{- end }}
+{{- if .Values.mcp.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "test-mcp") }}
+  labels:
+    {{- include "life-dashboard.selectorLabels" (list . "test") | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  {{- $env := printf `- name: URL
+  value: %q
+- name: MCP_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: %s
+      key: MCP_TOKEN` $mcp $secret }}
+  {{- $script := printf `%s
+
+url = os.environ["URL"]
+status, _ = fetch(url + "/health")
+check(status == 200, "the MCP server is healthy: GET /health is 200")
+listing = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).encode()
+headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+status, _ = fetch(url + "/mcp", headers, listing)
+check(status == 401, "the MCP server refuses a request without its token (got %%s)" %% status)
+status, body = fetch(url + "/mcp", {**headers, "Authorization": "Bearer " + os.environ["MCP_TOKEN"]}, listing)
+check(status == 200 and "daily_summary" in body, "the MCP server lists its tools with its token")
+` (include "life-dashboard.pyHelpers" .) }}
+  {{- include "life-dashboard.toolPodSpec" (list . "test" $env $script) | nindent 2 }}
+{{- end }}

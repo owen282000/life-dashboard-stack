@@ -1,0 +1,41 @@
+{{- range $component := list "receiver" "grafana" }}
+{{- $v := index $.Values $component }}
+{{- if $v.httpRoute.enabled }}
+{{- $paths := include "life-dashboard.routePaths" (list $ $component) | fromJsonArray }}
+{{- if not $paths }}
+{{- fail "receiver.httpRoute is enabled, but receiver.expose opens no path" }}
+{{- end }}
+{{- if not $v.httpRoute.parentRefs }}
+{{- fail (printf "%s.httpRoute.parentRefs is empty: name the Gateway to attach to" $component) }}
+{{- end }}
+---
+# Gateway API: attaches to a Gateway you run (parentRefs).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "life-dashboard.componentName" (list $ $component) }}
+  labels:
+    {{- include "life-dashboard.labels" (list $ $component) | nindent 4 }}
+  {{- with $v.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml $v.httpRoute.parentRefs | nindent 4 }}
+  {{- with $v.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - matches:
+        {{- range $path := $paths }}
+        - path:
+            type: PathPrefix
+            value: {{ $path }}
+        {{- end }}
+      backendRefs:
+        - name: {{ include "life-dashboard.componentName" (list $ $component) }}
+          port: {{ $v.service.port }}
+{{- end }}
+{{- end }}

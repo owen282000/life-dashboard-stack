@@ -2,9 +2,13 @@ name: release
 
 # A version tag (1.2.3, no prefix) publishes the receiver, grafana, db and mcp images to GHCR
 # for amd64 and arm64, tagged 1.2.3, 1.2, 1 and latest, with build provenance and an SBOM.
-# Then it creates the GitHub release with docker-compose.yml and env.example attached and
-# the version's section of CHANGELOG.md as the notes. Installs download those two files
-# from the latest release, so the compose file has to point at the tagged version.
+# It packages the Helm chart in charts/life-dashboard and pushes it to
+# oci://ghcr.io/owen282000/charts/life-dashboard as version 1.2.3, with an attestation. Then
+# it creates the GitHub release with docker-compose.yml and env.example attached and the
+# version's section of CHANGELOG.md as the notes, followed by where to get the images and the
+# chart. Everything carries the one version of the tag: scripts/prepare-release.sh points the
+# compose file and the chart's version and appVersion at it, and the check job refuses a tag
+# that does not match them.
 
 on:
   push:
@@ -18,40 +22,35 @@ concurrency:
 
 env:
   TAG: ${{ github.ref_name }}
+  HELM_VERSION: v4.3.0
 
 jobs:
   check:
     name: Check the version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: The tag is strict semver and higher than the last version
+      - name: The tag, the chart, docker-compose.yml and CHANGELOG.md agree on the version
+        run: .github/scripts/check-release.sh "$TAG"
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: The chart lints, and its version is not on GHCR yet
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "$TAG is not strict semver (X.Y.Z)"; exit 1; }
-          prev=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$TAG" | sort -V | tail -1)
-          if [ -n "$prev" ] && [ "$(printf '%s\n%s\n' "$prev" "$TAG" | sort -V | tail -1)" != "$TAG" ]; then
-            echo "$TAG is not higher than the latest version $prev"
+          helm lint --strict charts/life-dashboard
+          echo "$GH_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if helm show chart oci://ghcr.io/owen282000/charts/life-dashboard --version "$TAG" > /dev/null 2>&1; then
+            echo "::error::chart version $TAG is already on GHCR"
             exit 1
           fi
-      - name: docker-compose.yml uses the tagged version
-        run: |
-          n=$(grep -cF ":\${LIFEDASH_VERSION:-$TAG}" docker-compose.yml || true)
-          if [ "$n" != 5 ]; then
-            echo "docker-compose.yml should default all five image lines to $TAG (found $n):"
-            grep -n "image:" docker-compose.yml
-            exit 1
-          fi
-      - name: CHANGELOG.md has a section for the version
-        run: |
-          awk -v v="$TAG" '/^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } } found && !/^\[.+\]: http/' \
-            CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "CHANGELOG.md has no section '## [$TAG]', or it is empty"
-            exit 1
-          fi
-          cat notes.md
+      - run: .github/scripts/release-notes.sh "$TAG"
 
   images:
     name: Publish ${{ matrix.image }}
@@ -129,9 +128,44 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+  chart:
+    name: Publish the Helm chart
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      REPOSITORY: ghcr.io/owen282000/charts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - id: push
+        name: Package and push the chart
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          # The check job made sure Chart.yaml says $TAG; the flags only make it explicit.
+          helm package charts/life-dashboard --version "$TAG" --app-version "$TAG" --destination dist
+          helm push "dist/life-dashboard-$TAG.tgz" "oci://$REPOSITORY" 2>&1 | tee push.log
+          digest=$(grep -o 'sha256:[0-9a-f]\{64\}' push.log | head -n 1)
+          [ -n "$digest" ]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      # Checked with: gh attestation verify oci://ghcr.io/owen282000/charts/life-dashboard:<version> -R owen282000/life-dashboard-stack
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.REPOSITORY }}/life-dashboard
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
   release:
     name: Create the release
-    needs: images
+    needs: [images, chart]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -143,8 +177,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          awk -v v="$TAG" '/^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } } found && !/^\[.+\]: http/' \
-            CHANGELOG.md > notes.md
+          .github/scripts/release-notes.sh "$TAG" > notes.md
           cp .env.example env.example
           gh release create "$TAG" docker-compose.yml env.example \
             --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md

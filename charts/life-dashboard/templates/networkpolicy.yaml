@@ -1,0 +1,160 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $pg := .Values.postgres }}
+{{- $release := dict "app.kubernetes.io/instance" .Release.Name }}
+{{- $components := list (list "receiver" 8080 $np.receiver.from) (list "grafana" 3000 $np.grafana.from) }}
+{{- if .Values.mcp.enabled }}
+{{- $components = append $components (list "mcp" 8090 $np.mcp.from) }}
+{{- end }}
+{{- range $c := $components }}
+{{- $name := index $c 0 }}
+---
+# {{ $name }}: in on its port, out only to DNS and the database.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "life-dashboard.componentName" (list $ $name) }}
+  labels:
+    {{- include "life-dashboard.labels" (list $ $name) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list $ $name) | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports:
+        - port: {{ index $c 1 }}
+          protocol: TCP
+      {{- with index $c 2 }}
+      from:
+        {{- toYaml . | nindent 8 }}
+        # The demo and helm test of this release.
+        - podSelector:
+            matchLabels:
+              {{- toYaml $release | nindent 14 }}
+      {{- end }}
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      {{- with $np.dns.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- if eq $pg.mode "cnpg" }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ include "life-dashboard.cnpgCluster" $ }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- else if eq $pg.mode "bundled" }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "life-dashboard.selectorLabels" (list $ "postgres") | nindent 14 }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- else }}
+    - ports:
+        - port: {{ $pg.external.port }}
+          protocol: TCP
+      {{- with $np.externalDatabase.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- if eq $name "grafana" }}
+    {{- with $np.grafanaEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
+{{- end }}
+{{- if eq $pg.mode "bundled" }}
+---
+# The bundled Postgres: in from the receiver, Grafana, the MCP server and the peers in
+# networkPolicy.postgres.from; nothing out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "postgres") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "postgres") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list . "postgres") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports:
+        - port: 5432
+          protocol: TCP
+      from:
+        {{- range $client := list "receiver" "grafana" "mcp" }}
+        - podSelector:
+            matchLabels:
+              {{- include "life-dashboard.selectorLabels" (list $ $client) | nindent 14 }}
+        {{- end }}
+        {{- with $np.postgres.from }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    {{- with $np.postgres.extraIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  egress: []
+{{- end }}
+{{- if eq $pg.mode "cnpg" }}
+{{- $cluster := include "life-dashboard.cnpgCluster" . }}
+---
+# The CloudNativePG instances. Postgres (5432) in from the receiver, Grafana, the MCP server,
+# the peers in networkPolicy.postgres.from and the other instances; the instance manager
+# (8000) in from the operator and the other instances. Metrics (9187) only through
+# networkPolicy.postgres.extraIngress. Ingress only: the instances keep their way out to the
+# Kubernetes API, to each other and to object storage.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "postgres") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "postgres") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: {{ $cluster }}
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 5432
+          protocol: TCP
+      from:
+        {{- range $client := list "receiver" "grafana" "mcp" }}
+        - podSelector:
+            matchLabels:
+              {{- include "life-dashboard.selectorLabels" (list $ $client) | nindent 14 }}
+        {{- end }}
+        {{- with $np.postgres.from }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 8000
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ $cluster }}
+    - ports:
+        - port: 8000
+          protocol: TCP
+      from:
+        {{- toYaml $np.postgres.cnpgOperator | nindent 8 }}
+    {{- with $np.postgres.extraIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

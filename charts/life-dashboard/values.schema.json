@@ -1,0 +1,1085 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Values of the life-dashboard chart",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object"
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "object"
+        ]
+      }
+    },
+    "timezone": {
+      "type": "string",
+      "description": "An IANA time zone name, such as Europe/Amsterdam",
+      "minLength": 1
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "webhookSecret": {
+          "type": "string"
+        },
+        "grafanaPassword": {
+          "type": "string"
+        },
+        "grafanaDbPassword": {
+          "type": "string"
+        },
+        "dashDbPassword": {
+          "type": "string"
+        },
+        "apiToken": {
+          "type": "string",
+          "pattern": "^(.{16,})?$"
+        },
+        "mcpToken": {
+          "type": "string",
+          "pattern": "^(.{16,})?$"
+        },
+        "postgresPassword": {
+          "type": "string"
+        },
+        "pairingToken": {
+          "type": "string",
+          "pattern": "^(.{16,})?$"
+        },
+        "keepOnUninstall": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "receiver": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "description": "Empty: image.tag, else the chart's appVersion"
+            },
+            "digest": {
+              "type": "string",
+              "description": "sha256:... pins the image; wins over the tag",
+              "pattern": "^(sha256:[a-f0-9]{64})?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publicUrl": {
+          "type": "string",
+          "description": "http(s)://host[:port] the phone reaches the receiver on",
+          "pattern": "^(https?://[^/?#\\s]+/?)?$"
+        },
+        "pairing": {
+          "type": "object",
+          "properties": {
+            "log": {
+              "type": "boolean"
+            },
+            "page": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "api": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "expose": {
+          "type": "object",
+          "properties": {
+            "webhook": {
+              "type": "boolean"
+            },
+            "api": {
+              "type": "boolean"
+            },
+            "pair": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "className": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Host names"
+            },
+            "tls": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Ingress TLS entries"
+            }
+          },
+          "additionalProperties": false
+        },
+        "httpRoute": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "parentRefs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Gateways to attach to"
+            },
+            "hostnames": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object"
+        },
+        "podSecurityContext": {
+          "type": "object"
+        },
+        "securityContext": {
+          "type": "object"
+        },
+        "podAnnotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "podLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "affinity": {
+          "type": "object"
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Extra container env entries"
+        },
+        "topologySpreadConstraints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "podDisruptionBudget": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minAvailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "grafana": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "description": "Empty: image.tag, else the chart's appVersion"
+            },
+            "digest": {
+              "type": "string",
+              "description": "sha256:... pins the image; wins over the tag",
+              "pattern": "^(sha256:[a-f0-9]{64})?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "adminUser": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rootUrl": {
+          "type": "string"
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "existingClaim": {
+              "type": "string"
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "accessModes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "size": {
+              "type": [
+                "string",
+                "integer"
+              ],
+              "description": "A Kubernetes quantity, such as 5Gi"
+            },
+            "keepOnUninstall": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "className": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Host names"
+            },
+            "tls": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Ingress TLS entries"
+            }
+          },
+          "additionalProperties": false
+        },
+        "httpRoute": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "parentRefs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Gateways to attach to"
+            },
+            "hostnames": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object"
+        },
+        "podSecurityContext": {
+          "type": "object"
+        },
+        "securityContext": {
+          "type": "object"
+        },
+        "podAnnotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "podLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "affinity": {
+          "type": "object"
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Extra container env entries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "description": "Empty: image.tag, else the chart's appVersion"
+            },
+            "digest": {
+              "type": "string",
+              "description": "sha256:... pins the image; wins over the tag",
+              "pattern": "^(sha256:[a-f0-9]{64})?$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "ClusterIP",
+                "NodePort",
+                "LoadBalancer"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object"
+        },
+        "podSecurityContext": {
+          "type": "object"
+        },
+        "securityContext": {
+          "type": "object"
+        },
+        "podAnnotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "podLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "affinity": {
+          "type": "object"
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Extra container env entries"
+        },
+        "podDisruptionBudget": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minAvailable": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "postgres": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Where the database runs",
+          "enum": [
+            "cnpg",
+            "bundled",
+            "external"
+          ]
+        },
+        "database": {
+          "type": "string",
+          "pattern": "^[a-z_][a-z0-9_]{0,62}$"
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-z_][a-z0-9_]{0,62}$"
+        },
+        "cnpg": {
+          "type": "object",
+          "properties": {
+            "clusterName": {
+              "type": "string",
+              "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$",
+              "maxLength": 50
+            },
+            "instances": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "imageName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storage": {
+              "type": "object",
+              "properties": {
+                "size": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "description": "A Kubernetes quantity, such as 5Gi"
+                },
+                "storageClass": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "walStorage": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "size": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "description": "A Kubernetes quantity, such as 5Gi"
+                },
+                "storageClass": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "resources": {
+              "type": "object"
+            },
+            "parameters": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "synchronous": {
+              "type": "object",
+              "description": "The Cluster's postgresql.synchronous section, as it is"
+            },
+            "affinity": {
+              "type": "object"
+            },
+            "keepOnUninstall": {
+              "type": "boolean"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "roles": {
+              "type": "object",
+              "properties": {
+                "grafanaRoSecret": {
+                  "type": "string"
+                },
+                "dashRoSecret": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "backup": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "objectStore": {
+                  "type": "object",
+                  "properties": {
+                    "create": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "retentionPolicy": {
+                      "type": "string",
+                      "pattern": "^([1-9][0-9]*[dwm])?$"
+                    },
+                    "configuration": {
+                      "type": "object",
+                      "description": "The ObjectStore's spec.configuration (Barman Cloud)"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "serverName": {
+                  "type": "string"
+                },
+                "scheduled": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "schedule": {
+                      "type": "string",
+                      "description": "Six cron fields, seconds first"
+                    },
+                    "immediate": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "recovery": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "objectStoreName": {
+                  "type": "string"
+                },
+                "serverName": {
+                  "type": "string"
+                },
+                "targetTime": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "bundled": {
+          "type": "object",
+          "properties": {
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "tag": {
+                  "type": "string",
+                  "description": "Empty: image.tag, else the chart's appVersion"
+                },
+                "digest": {
+                  "type": "string",
+                  "description": "sha256:... pins the image; wins over the tag",
+                  "pattern": "^(sha256:[a-f0-9]{64})?$"
+                }
+              },
+              "additionalProperties": false
+            },
+            "storage": {
+              "type": "object",
+              "properties": {
+                "size": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "description": "A Kubernetes quantity, such as 5Gi"
+                },
+                "storageClass": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "resources": {
+              "type": "object"
+            },
+            "podAnnotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "tolerations": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "affinity": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "external": {
+          "type": "object",
+          "properties": {
+            "existingSecret": {
+              "type": "string"
+            },
+            "urlKey": {
+              "type": "string",
+              "minLength": 1
+            },
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "database": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sslmode": {
+              "type": "string",
+              "enum": [
+                "disable",
+                "allow",
+                "prefer",
+                "require",
+                "verify-ca",
+                "verify-full"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ]
+    },
+    "demo": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 400
+        }
+      },
+      "additionalProperties": false
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "receiver": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy from peers"
+            }
+          },
+          "additionalProperties": false
+        },
+        "grafana": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy from peers"
+            }
+          },
+          "additionalProperties": false
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy from peers"
+            }
+          },
+          "additionalProperties": false
+        },
+        "externalDatabase": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy to peers"
+            }
+          },
+          "additionalProperties": false
+        },
+        "grafanaEgress": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "NetworkPolicy egress rules"
+        },
+        "dns": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy to peers for DNS; empty: port 53 anywhere"
+            }
+          },
+          "additionalProperties": false
+        },
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "More NetworkPolicy from peers for Postgres on 5432"
+            },
+            "cnpgOperator": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy from peers of the CloudNativePG operator"
+            },
+            "extraIngress": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "NetworkPolicy ingress rules"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "postgres": {
+            "properties": {
+              "mode": {
+                "const": "external"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "postgres": {
+            "properties": {
+              "external": {
+                "required": [
+                  "existingSecret",
+                  "host"
+                ],
+                "properties": {
+                  "existingSecret": {
+                    "minLength": 1
+                  },
+                  "host": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

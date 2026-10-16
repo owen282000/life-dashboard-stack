@@ -1,0 +1,357 @@
+# Values of the life-dashboard chart. docs/kubernetes.md in the repository explains them
+# per topic; docs/compatibility.md lists the ones that stay stable within a major version.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# The four images: ghcr.io/owen282000/life-dashboard-{receiver,grafana,mcp,db}. An empty
+# tag means the chart's appVersion, the version of the stack this chart was released with.
+image:
+  registry: ghcr.io
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Your time zone as an IANA name (TZ in Docker Compose). Days, nights and hours in the
+# dashboards, the API and the MCP server follow it.
+timezone: UTC
+
+# Secrets. Either name an existing Secret, or let the chart generate the values once and
+# keep them on upgrades (it reads them back from the cluster with lookup; see
+# docs/kubernetes.md for GitOps tools, where lookup returns nothing).
+secrets:
+  # An existing Secret in the release's namespace with the keys WEBHOOK_SECRET,
+  # GRAFANA_PASSWORD, API_TOKEN and MCP_TOKEN; GRAFANA_DB_PASSWORD and DASH_DB_PASSWORD
+  # unless postgres.mode is cnpg; POSTGRES_PASSWORD with postgres.mode bundled; and
+  # optionally PAIRING_TOKEN. The values below are then ignored.
+  existingSecret: ""
+  # Values to use instead of generated ones. Empty: generated once, then kept.
+  webhookSecret: ""
+  grafanaPassword: ""
+  grafanaDbPassword: ""
+  dashDbPassword: ""
+  apiToken: ""
+  mcpToken: ""
+  postgresPassword: ""
+  # Opens /pair from anywhere, through an Ingress too, as /pair?token=<it>. At least 16
+  # characters. Empty: /pair answers only requests from a private address without a proxy
+  # header.
+  pairingToken: ""
+  # Keep the generated Secrets on helm uninstall, so a reinstall with the same release
+  # name finds the passwords that match the data that was kept.
+  keepOnUninstall: true
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ------------------------------------------------------------------ receiver
+
+receiver:
+  image:
+    repository: owen282000/life-dashboard-receiver
+    tag: ""
+    digest: ""
+  replicas: 1
+  # The address your phone reaches the receiver on, as it goes in the pairing QR code, such
+  # as https://lifedash.example.com. The receiver adds /webhook/<label>.
+  publicUrl: ""
+  # Both show the webhook secret, so both are off on Kubernetes, where every pod has a
+  # private address and logs are often collected. Pair with kubectl exec instead
+  # (docs/kubernetes.md), or switch the page on while you pair.
+  pairing:
+    # The pairing block with the QR code and the secret in the receiver's log at every start.
+    log: false
+    # The pairing page at /pair, for requests from a private address without a proxy header,
+    # or with ?token= and secrets.pairingToken.
+    page: false
+  # The read-only JSON API under /api/ (docs/api.md), with API_TOKEN as its bearer token.
+  api:
+    enabled: false
+  # Which paths the Ingress and the HTTPRoute send to the receiver. /webhook is what the
+  # phones need. /pair through a proxy answers only with secrets.pairingToken.
+  expose:
+    webhook: true
+    api: false
+    pair: false
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    #  - lifedash.example.com
+    tls: []
+    #  - secretName: lifedash-tls
+    #    hosts: [lifedash.example.com]
+  httpRoute:
+    enabled: false
+    annotations: {}
+    parentRefs: []
+    #  - name: my-gateway
+    #    namespace: gateway-system
+    #    sectionName: https
+    hostnames: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  podSecurityContext: {}
+  securityContext: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  extraEnv: []
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
+# ------------------------------------------------------------------ Grafana
+
+grafana:
+  image:
+    repository: owen282000/life-dashboard-grafana
+    tag: ""
+    digest: ""
+  adminUser: admin
+  # Grafana's root_url, for links and redirects behind an Ingress, such as
+  # https://grafana.example.com/. Empty: Grafana's default.
+  rootUrl: ""
+  persistence:
+    # A PersistentVolumeClaim for /var/lib/grafana: users, preferences and the copies of
+    # dashboards you saved. Without it an emptyDir, reset at every restart.
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+    size: 1Gi
+    keepOnUninstall: true
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+  httpRoute:
+    enabled: false
+    annotations: {}
+    parentRefs: []
+    hostnames: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 768Mi
+  podSecurityContext: {}
+  securityContext: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: []
+
+# ------------------------------------------------------------------ MCP server
+
+mcp:
+  # The read-only MCP server (docs/mcp.md), with MCP_TOKEN as its bearer token.
+  enabled: false
+  image:
+    repository: owen282000/life-dashboard-mcp
+    tag: ""
+    digest: ""
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 8090
+    annotations: {}
+  resources:
+    requests:
+      cpu: 25m
+      memory: 96Mi
+    limits:
+      memory: 384Mi
+  podSecurityContext: {}
+  securityContext: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraEnv: []
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
+# ------------------------------------------------------------------ Postgres
+
+postgres:
+  # cnpg: a CloudNativePG Cluster, created by this chart; the operator must be installed.
+  # bundled: one Postgres pod in a StatefulSet with a PersistentVolumeClaim.
+  # external: a Postgres you run yourself, with DATABASE_URL in postgres.external.
+  mode: cnpg
+  # The database and its owner, the user the receiver connects as (cnpg and bundled).
+  database: lifedash
+  owner: lifedash
+
+  cnpg:
+    # The Cluster's name. Empty: <release fullname>-postgres.
+    clusterName: ""
+    instances: 1
+    # CloudNativePG's own Postgres 18 image. The stack's db image is not used here: its
+    # entrypoint only guards an old Docker volume, and CloudNativePG expects its own images.
+    imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+    storage:
+      size: 5Gi
+      storageClass: ""
+    walStorage:
+      enabled: false
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    # postgresql.conf parameters, passed to the Cluster as they are.
+    parameters: {}
+    # Synchronous replication, passed to the Cluster's postgresql.synchronous as it is, such as
+    # {method: any, number: 1, dataDurability: preferred}. Empty: asynchronous, CloudNativePG's
+    # default. See docs/kubernetes.md for the trade-off.
+    synchronous: {}
+    # The Cluster's affinity section (CloudNativePG's own format).
+    affinity: {}
+    # Keep the Cluster, and so the data, on helm uninstall. Deleting a Cluster deletes its
+    # volumes.
+    keepOnUninstall: true
+    # Extra annotations on the Cluster, such as argocd.argoproj.io/sync-options: Delete=false.
+    annotations: {}
+    # The password Secrets of grafana_ro and dash_ro (type kubernetes.io/basic-auth, with
+    # username and password). Empty: the chart creates and keeps them.
+    roles:
+      grafanaRoSecret: ""
+      dashRoSecret: ""
+    # Backups to object storage through the Barman Cloud plugin, which must be installed
+    # next to the operator.
+    backup:
+      enabled: false
+      # The ObjectStore to write to. With create, the chart makes it from configuration.
+      objectStore:
+        create: true
+        name: ""
+        retentionPolicy: 30d
+        # The ObjectStore's spec.configuration: destinationPath, endpointURL, credentials,
+        # compression. See docs/kubernetes.md for an example.
+        configuration: {}
+      # The folder in the object store. Empty: the Cluster's name.
+      serverName: ""
+      scheduled:
+        enabled: true
+        # Six fields, seconds first: every day at 03:00 in the operator's time zone.
+        schedule: "0 0 3 * * *"
+        immediate: true
+    # Bootstrap a new Cluster from a backup instead of an empty database.
+    recovery:
+      enabled: false
+      objectStoreName: ""
+      serverName: ""
+      # A point in time to stop at, such as "2026-10-16 08:00:00+00". Empty: the end of the WAL.
+      targetTime: ""
+
+  bundled:
+    image:
+      repository: owen282000/life-dashboard-db
+      tag: ""
+      digest: ""
+    storage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  external:
+    # A Secret with the owner's connection URL, such as
+    # postgresql://lifedash:<password>@db.example.com:5432/lifedash?sslmode=require
+    existingSecret: ""
+    urlKey: DATABASE_URL
+    # Where Grafana and the MCP server connect, as grafana_ro and dash_ro.
+    host: ""
+    port: 5432
+    database: lifedash
+    sslmode: require
+
+# ------------------------------------------------------------------ extras
+
+# Posts 60 days of made-up data for two phones through the receiver after every install
+# and upgrade, like the demo profile in Docker Compose. Not for a real install.
+demo:
+  enabled: false
+  days: 60
+
+# NetworkPolicies for the stack's own pods. Off by default; docs/kubernetes.md says what
+# they allow.
+networkPolicy:
+  enabled: false
+  # Who may reach each service, as NetworkPolicy "from" peers. Empty: anyone. Pods of this
+  # release (the demo and helm test) are always allowed.
+  receiver:
+    from: []
+  grafana:
+    from: []
+  mcp:
+    from: []
+  # With postgres.mode external: where the database is, as NetworkPolicy "to" peers.
+  # Empty: any address on postgres.external.port.
+  externalDatabase:
+    to: []
+  # Extra egress rules for Grafana, such as SMTP for alerts.
+  grafanaEgress: []
+  # Where the pods may send DNS queries, as NetworkPolicy "to" peers. The default is the
+  # cluster DNS in kube-system with the usual k8s-app: kube-dns label. Empty: port 53 anywhere,
+  # for a node-local DNS cache or a cluster that labels its DNS differently.
+  dns:
+    to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+  # The database pods: the bundled StatefulSet, or the CloudNativePG instances.
+  postgres:
+    # More peers that may reach Postgres on 5432, such as a backup job or a tool in another
+    # namespace.
+    from: []
+    # Where the CloudNativePG operator runs; it reaches the instance manager on 8000.
+    cnpgOperator:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: cnpg-system
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: cloudnative-pg
+    # Whole ingress rules of your own, such as Prometheus on the metrics port 9187.
+    extraIngress: []

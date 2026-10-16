@@ -1,0 +1,173 @@
+{{- $r := .Values.receiver }}
+{{- $pg := .Values.postgres }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "receiver") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "receiver") | nindent 4 }}
+spec:
+  replicas: {{ $r.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list . "receiver") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "life-dashboard.selectorLabels" (list . "receiver") | nindent 8 }}
+        {{- with $r.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secrets: {{ include "life-dashboard.secretChecksum" . }}
+        {{- with $r.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "life-dashboard.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- include "life-dashboard.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "life-dashboard.podSecurityContext" (list 65534 $r.podSecurityContext) | nindent 8 }}
+      containers:
+        - name: receiver
+          image: {{ include "life-dashboard.image" (list . $r.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            {{- if eq $pg.mode "cnpg" }}
+            # The owner's URL from the app Secret that CloudNativePG creates for the Cluster.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.cnpgCluster" . }}-app
+                  key: uri
+            {{- else if eq $pg.mode "bundled" }}
+            # libpq takes the password from PGPASSWORD, so it may hold any character.
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: {{ printf "postgresql://%s@%s:5432/%s" $pg.owner (include "life-dashboard.dbHost" .) $pg.database | quote }}
+            {{- else }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $pg.external.existingSecret }}
+                  key: {{ $pg.external.urlKey }}
+            {{- end }}
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: WEBHOOK_SECRET
+            {{- if ne $pg.mode "cnpg" }}
+            # The receiver sets grafana_ro's password; on CloudNativePG the operator does.
+            {{- include "life-dashboard.roPasswordEnv" (list . "grafana") | nindent 12 }}
+            {{- end }}
+            # The API reads as dash_ro.
+            {{- include "life-dashboard.roPasswordEnv" (list . "dash") | nindent 12 }}
+            {{- if $r.api.enabled }}
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: API_TOKEN
+            {{- end }}
+            - name: PAIRING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: PAIRING_TOKEN
+                  optional: true
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            - name: PUBLIC_URL
+              value: {{ $r.publicUrl | quote }}
+            - name: PAIRING_LOG
+              value: {{ ternary "1" "0" $r.pairing.log | quote }}
+            - name: PAIRING_PAGE
+              value: {{ ternary "1" "0" $r.pairing.page | quote }}
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            {{- with $r.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          # Wait a moment before SIGTERM, so the Service stops sending new requests first; the
+          # receiver then lets the ones in flight finish.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          # /health is 503 until the migrations ran and the views and roles are set up.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml $r.resources | nindent 12 }}
+          securityContext:
+            {{- include "life-dashboard.containerSecurityContext" $r.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+      {{- with $r.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "receiver") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "receiver") | nindent 4 }}
+  {{- with $r.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $r.service.type }}
+  selector:
+    {{- include "life-dashboard.selectorLabels" (list . "receiver") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $r.service.port }}
+      targetPort: http

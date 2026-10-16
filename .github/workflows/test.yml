@@ -8,25 +8,106 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The versions of the tools. Dependabot does not see these, so they are pinned by hand and
+# checked before each release; the images go by tag and digest.
+env:
+  HELM_VERSION: v4.3.0
+  HELM3_VERSION: v3.22.0
+  CT_VERSION: 3.14.0
+  KIND_VERSION: v0.33.0
+  KIND_NODE_IMAGE: kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
+  CALICO_VERSION: v3.32.2
+  CNPG_VERSION: 1.30.1
+  KUBECONFORM_IMAGE: ghcr.io/yannh/kubeconform:v0.8.0@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e
+  ACTIONLINT_IMAGE: rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+  SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+
 jobs:
+  # The workflows, the shell scripts and every way to read the compose files.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint, with shellcheck on the run steps
+        run: docker run --rm -v "$PWD:/repo" -w /repo "$ACTIONLINT_IMAGE" -color
+      - name: shellcheck on the scripts and the pre-push hook
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tools/*.sh .github/scripts/*.sh .githooks/pre-push
+      - name: docker compose config, with and without the build override and the profiles
+        run: |
+          for files in "-f docker-compose.yml" "-f docker-compose.yml -f docker-compose.build.yml"; do
+            for profiles in "" "--profile demo" "--profile mcp" "--profile demo --profile mcp"; do
+              echo "docker compose $files $profiles config"
+              # shellcheck disable=SC2086 # the flags are meant to split
+              docker compose $files $profiles config --quiet
+            done
+          done
+
+  # scripts/prepare-release.sh in a throwaway clone, then the release workflow's own check on the
+  # result: the changelog, the compose file and the chart all move to the next version together.
+  release-files:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: prepare-release.sh and the release check agree
+        run: |
+          current=$(grep -o 'LIFEDASH_VERSION:-[0-9.]*' docker-compose.yml | head -n 1 | cut -d- -f2)
+          next=$(echo "$current" | awk -F. '{ print $1 "." $2 + 1 ".0" }')
+          dir="$RUNNER_TEMP/release"
+          git clone --quiet "$GITHUB_WORKSPACE" "$dir"
+          cd "$dir"
+          echo "::group::scripts/prepare-release.sh $next"
+          scripts/prepare-release.sh "$next"
+          git diff --stat
+          echo "::endgroup::"
+          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml " ] \
+            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file and Chart.yaml"; exit 1; }
+          grep -q "^## \[$next\] - $(date +%Y-%m-%d)$" CHANGELOG.md
+          grep -q "^\[Unreleased\]: .*/compare/$next\.\.\.HEAD$" CHANGELOG.md
+          grep -q "^\[$next\]: " CHANGELOG.md
+          .github/scripts/check-release.sh "$next"
+          helm lint --strict charts/life-dashboard
+          # The chart's images default to the new version.
+          tags=$(helm template ci charts/life-dashboard -f charts/life-dashboard/ci/bundled-values.yaml \
+            | grep -o 'image: "\?ghcr.io/owen282000/life-dashboard-[a-z]*:[^"]*' | sed 's/.*://' | sort -u)
+          echo "chart image tags: $tags"
+          [ "$tags" = "$next" ]
+          .github/scripts/release-notes.sh "$next"
+
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [receiver, mcp]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14.8"
+          cache: pip
+          cache-dependency-path: "*/requirements*.txt"
       - run: pip install -r receiver/requirements-dev.txt -r mcp/requirements-dev.txt
-      # The tests start their own Postgres container from the image in db/Dockerfile.
-      - run: python -m pytest -q receiver/tests
-      - run: python -m pytest -q mcp/tests
-      - run: docker compose --profile demo --profile mcp config --quiet
-      - run: docker compose -f docker-compose.yml -f docker-compose.build.yml --profile demo --profile mcp config --quiet
+      # The tests start their own Postgres container on the Postgres image of db/Dockerfile.
+      # receiver/tests also holds the documentation checks, among them the one for long dashes.
+      - run: python -m pytest -q ${{ matrix.suite }}/tests
 
   # Every image for both architectures, without pushing, so a broken Dockerfile fails here
   # and not on the release tag.
   images:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -49,6 +130,7 @@ jobs:
   # and the MCP server answer with their tokens and refuse without them.
   stack:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       COMPOSE_FILE: docker-compose.yml:docker-compose.build.yml
       COMPOSE_PROFILES: demo,mcp
@@ -86,3 +168,171 @@ jobs:
         run: docker compose logs
       - if: always()
         run: docker compose down -v
+
+  # The Helm chart with Helm 4 and Helm 3: lint and render every value file in ci/, validate
+  # the result against the Kubernetes schemas and those of the CloudNativePG, Barman Cloud and
+  # Gateway API resources, and check that the chart's Grafana data source matches the image's.
+  chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        helm: [4, 3]
+    env:
+      CHART: charts/life-dashboard
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ matrix.helm == 3 && env.HELM3_VERSION || env.HELM_VERSION }}
+      - name: Lint and render every value file
+        run: |
+          helm version
+          helm lint --strict "$CHART"
+          mkdir -p rendered
+          for values in "$CHART"/ci/*.yaml; do
+            echo "::group::$values"
+            helm lint --strict "$CHART" -f "$values"
+            helm template ci "$CHART" -f "$values" > "rendered/$(basename "$values")"
+            echo "::endgroup::"
+          done
+      - name: kubeconform, with the CRD schemas of the datreeio CRDs catalog
+        run: |
+          mkdir -p "$RUNNER_TEMP/kubeconform"
+          docker run --rm -v "$PWD/rendered:/rendered:ro" -v "$RUNNER_TEMP/kubeconform:/cache" "$KUBECONFORM_IMAGE" \
+            -strict -summary -cache /cache -kubernetes-version 1.34.0 \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            /rendered
+      - name: The schema refuses a typo and a missing external database
+        run: |
+          if helm template ci "$CHART" --set receiver.replica=2 > /dev/null 2>&1; then echo "a typo passed"; exit 1; fi
+          if helm template ci "$CHART" --set postgres.mode=external > /dev/null 2>&1; then echo "external without a database passed"; exit 1; fi
+      - name: The chart's data source is the image's, pointed at another host
+        run: |
+          helm template ci "$CHART" | yq 'select(.kind == "ConfigMap" and .metadata.name == "ci-life-dashboard-grafana-datasource") | .data["postgres.yml"]' \
+            | yq 'del(.datasources[].url, .datasources[].jsonData.sslmode)' > chart.yml
+          yq 'del(.datasources[].url, .datasources[].jsonData.sslmode)' grafana/provisioning/datasources/postgres.yml > image.yml
+          diff image.yml chart.yml
+      # chart-testing once: Chart.yaml against its schema, yamllint on Chart.yaml and
+      # values.yaml, and helm lint with every value file in ci/.
+      - if: matrix.helm == 4
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+        with:
+          version: ${{ env.CT_VERSION }}
+      - if: matrix.helm == 4
+        run: ct lint --charts "$CHART" --validate-maintainers=false --check-version-increment=false
+
+  # The chart installed in kind with the images built from this commit, once per Postgres mode,
+  # on Calico so the NetworkPolicies are enforced. cnpg: CloudNativePG with the demo, the API,
+  # the MCP server and the pairing page; bundled: the db image in a StatefulSet. Each runs
+  # helm test, checks who can reach Postgres, then a no-op upgrade that must roll no pod and keep
+  # the generated secrets, and an upgrade with a changed value that keeps them too.
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [cnpg, bundled]
+    env:
+      CHART: charts/life-dashboard
+      TAG: ci
+      NS: ${{ matrix.mode }}
+      RELEASE: lifedash
+      NAME: lifedash-life-dashboard
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
+        with:
+          version: ${{ env.KIND_VERSION }}
+          node_image: ${{ env.KIND_NODE_IMAGE }}
+          config: .github/kind.yaml
+          cluster_name: life-dashboard
+          # Without a network plugin the node is not Ready until Calico runs.
+          wait: 0s
+      - name: Install Calico
+        run: |
+          kubectl create -f "https://raw.githubusercontent.com/projectcalico/calico/$CALICO_VERSION/manifests/calico.yaml" > /dev/null
+          kubectl -n kube-system rollout status daemonset/calico-node --timeout=300s
+          kubectl wait --for=condition=Ready nodes --all --timeout=300s
+      - name: Build the images and load them into kind
+        run: |
+          for image in receiver grafana mcp db; do
+            docker build -q -f "$image/Dockerfile" -t "ghcr.io/owen282000/life-dashboard-$image:$TAG" .
+            kind load docker-image --name life-dashboard "ghcr.io/owen282000/life-dashboard-$image:$TAG"
+          done
+      - if: matrix.mode == 'cnpg'
+        name: Install CloudNativePG
+        run: |
+          kubectl apply --server-side -f "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v$CNPG_VERSION/cnpg-$CNPG_VERSION.yaml" > /dev/null
+          kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
+      - name: Install the chart under the restricted Pod Security level and run helm test
+        run: |
+          kubectl create namespace "$NS"
+          kubectl label namespace "$NS" pod-security.kubernetes.io/enforce=restricted
+          helm install "$RELEASE" "$CHART" -n "$NS" -f "$CHART/ci/$NS-values.yaml" --set image.tag="$TAG" --wait --timeout 15m
+          helm test "$RELEASE" -n "$NS" --logs
+      - if: matrix.mode == 'cnpg'
+        name: The receiver uses CloudNativePG's roles, and pairing.py prints the code
+        run: |
+          kubectl -n "$NS" logs "deployment/$NAME-receiver" > receiver.log
+          grep -q "grafana_ro is managed outside the receiver" receiver.log
+          # Only the URL line: the block also holds the webhook secret.
+          kubectl -n "$NS" exec "deployment/$NAME-receiver" -- python pairing.py pixel > pairing.txt
+          grep -E 'Webhook URL: +http://lifedash\.test:8080/webhook/pixel$' pairing.txt
+      - if: matrix.mode == 'cnpg'
+        name: Only the stack and CloudNativePG reach the CloudNativePG instances
+        run: |
+          kubectl create namespace outsider
+          primary=$(kubectl -n "$NS" get pod -l "cnpg.io/cluster=$NAME-postgres,cnpg.io/instanceRole=primary" -o jsonpath='{.items[0].status.podIP}')
+          .github/scripts/kind-probe.sh outsider - \
+            "blocked:$primary:5432" "blocked:$primary:8000" "blocked:$NAME-postgres-rw.$NS:5432" \
+            "open:$NAME-receiver.$NS:8080"
+          # The receiver's own connection works, through the policy: helm test passed, and the
+          # Cluster is healthy, so the operator reaches the instance manager on 8000.
+          kubectl -n "$NS" wait "clusters.postgresql.cnpg.io/$NAME-postgres" --for=condition=Ready --timeout=60s
+      - if: matrix.mode == 'bundled'
+        name: Only the stack and the extra peer (app=backup) reach the bundled Postgres
+        run: |
+          kubectl create namespace outsider
+          pod=$(kubectl -n "$NS" get pod -l app.kubernetes.io/component=postgres -o jsonpath='{.items[0].status.podIP}')
+          .github/scripts/kind-probe.sh outsider - \
+            "blocked:$pod:5432" "blocked:$NAME-postgres.$NS:5432" "open:$NAME-receiver.$NS:8080"
+          .github/scripts/kind-probe.sh "$NS" - "blocked:$NAME-postgres:5432"
+          .github/scripts/kind-probe.sh "$NS" app=backup "open:$NAME-postgres:5432" "open:$pod:5432"
+      - name: A no-op upgrade rolls no pod and keeps the generated secrets
+        run: |
+          state() {
+            kubectl -n "$NS" get secret -l app.kubernetes.io/component=secrets -o json | jq -S '[.items[] | {(.metadata.name): .data}]' | sha256sum
+            kubectl -n "$NS" get pods --field-selector=status.phase=Running -o name | sort
+          }
+          before=$(state)
+          echo "$before" | grep '^pod/'
+          helm upgrade "$RELEASE" "$CHART" -n "$NS" -f "$CHART/ci/$NS-values.yaml" --set image.tag="$TAG" --wait --timeout 15m
+          after=$(state)
+          if [ "$before" != "$after" ]; then
+            echo "::error::$NS: the no-op upgrade rolled pods or changed the generated secrets"
+            diff <(echo "$before") <(echo "$after") || true
+            exit 1
+          fi
+      - name: An upgrade with a changed value keeps the generated secrets, and helm test passes
+        run: |
+          secrets() { kubectl -n "$NS" get secret -l app.kubernetes.io/component=secrets -o json | jq -S '[.items[] | {(.metadata.name): .data}]' | sha256sum; }
+          receiver() { kubectl -n "$NS" get pods -l app.kubernetes.io/component=receiver --field-selector=status.phase=Running -o name; }
+          before=$(secrets) old=$(receiver)
+          helm upgrade "$RELEASE" "$CHART" -n "$NS" -f "$CHART/ci/$NS-values.yaml" --set image.tag="$TAG" \
+            --set-string receiver.podAnnotations.ci-upgrade=2 --wait --timeout 15m
+          [ "$(secrets)" = "$before" ] || { echo "::error::$NS: the generated secrets changed on upgrade"; exit 1; }
+          [ "$(receiver)" != "$old" ] || { echo "::error::$NS: the changed value did not roll the receiver"; exit 1; }
+          helm test "$RELEASE" -n "$NS" --logs
+      - if: failure()
+        run: |
+          kubectl get pods -A -o wide
+          kubectl get clusters.postgresql.cnpg.io,networkpolicies -A || true
+          kubectl -n "$NS" describe pods || true
+          for d in receiver grafana mcp; do kubectl -n "$NS" logs "deployment/$NAME-$d" --tail=100 || true; done

@@ -316,7 +316,7 @@ def run_receiver(dsn, until, **env):
 
 
 def test_log_shows_the_code_at_start(db):
-    out = run_receiver(db, "PAIRING_LOG=0 in .env hides this block")
+    out = run_receiver(db, "PAIRING_LOG=0 hides this block")
     assert "database ready" in out
     assert pairing.pairing_url("http://192.168.1.10:8080/webhook/phone", SECRET) in out
     assert SECRET in out and "█" in out
@@ -327,3 +327,14 @@ def test_log_switch_keeps_the_secret_out(db):
     assert "database ready" in out
     assert SECRET not in out
     assert "Pair a phone" not in out and "█" not in out
+
+
+def test_pairing_py_prints_the_code_on_demand():
+    env = dict(os.environ, PUBLIC_URL="http://192.168.1.10:8080", WEBHOOK_SECRET=SECRET)
+    out = subprocess.run([sys.executable, str(RECEIVER_DIR / "pairing.py"), "pixel"], env=env,
+                         capture_output=True, text=True, check=True).stdout
+    assert pairing.pairing_url("http://192.168.1.10:8080/webhook/pixel", SECRET) in out
+    assert "█" in out and "PAIRING_LOG" not in out
+    bad = subprocess.run([sys.executable, str(RECEIVER_DIR / "pairing.py"), "Not A Label"], env=env,
+                         capture_output=True, text=True)
+    assert bad.returncode == 2 and SECRET not in bad.stdout

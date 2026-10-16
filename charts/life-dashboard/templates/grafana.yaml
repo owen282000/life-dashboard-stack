@@ -1,0 +1,208 @@
+{{- $g := .Values.grafana }}
+{{- $p := $g.persistence }}
+# The data source of the image, pointed at this release's Postgres. It replaces the image's
+# datasources folder; the name and the uid stay the same, so the dashboards find it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "grafana-datasource") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "grafana") | nindent 4 }}
+data:
+  postgres.yml: |
+    apiVersion: 1
+    datasources:
+      - name: LifeDashboard Postgres
+        uid: lifedash-postgres
+        type: grafana-postgresql-datasource
+        access: proxy
+        url: {{ printf "%s:%s" (include "life-dashboard.dbHost" .) (include "life-dashboard.dbPort" .) }}
+        user: grafana_ro
+        isDefault: true
+        secureJsonData:
+          password: $GRAFANA_DB_PASSWORD
+        jsonData:
+          database: {{ include "life-dashboard.dbName" . }}
+          sslmode: {{ include "life-dashboard.dbSslmode" . }}
+          postgresVersion: 1500
+          timeInterval: 1m
+{{- if and $p.enabled (not $p.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "grafana") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "grafana") | nindent 4 }}
+  {{- if $p.keepOnUninstall }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml $p.accessModes | nindent 4 }}
+  {{- with $p.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "grafana") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "grafana") | nindent 4 }}
+spec:
+  # Grafana keeps its state in SQLite on one volume: one pod, replaced, never two at once.
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list . "grafana") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "life-dashboard.selectorLabels" (list . "grafana") | nindent 8 }}
+        {{- with $g.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secrets: {{ include "life-dashboard.secretChecksum" . }}
+        checksum/datasource: {{ printf "%s:%s/%s/%s" (include "life-dashboard.dbHost" .) (include "life-dashboard.dbPort" .) (include "life-dashboard.dbName" .) (include "life-dashboard.dbSslmode" .) | sha256sum }}
+        {{- with $g.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "life-dashboard.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- include "life-dashboard.imagePullSecrets" . | nindent 6 }}
+      # The image puts its user in group 0 as well. From Kubernetes 1.33 on, Strict keeps the
+      # pod to the groups set here; podSecurityContext.supplementalGroupsPolicy: Merge undoes it
+      # for a container runtime that doesn't support it.
+      {{- $grafanaPod := default dict $g.podSecurityContext }}
+      {{- if and (semverCompare ">=1.33.0-0" .Capabilities.KubeVersion.Version) (not (hasKey $grafanaPod "supplementalGroupsPolicy")) }}
+      {{- $grafanaPod = merge (dict "supplementalGroupsPolicy" "Strict") $grafanaPod }}
+      {{- end }}
+      securityContext:
+        {{- include "life-dashboard.podSecurityContext" (list 472 $grafanaPod) | nindent 8 }}
+      containers:
+        - name: grafana
+          image: {{ include "life-dashboard.image" (list . $g.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ $g.adminUser | quote }}
+            # Grafana reads it only when it creates the admin user, on its first start.
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: GRAFANA_PASSWORD
+            {{- include "life-dashboard.roPasswordEnv" (list . "grafana") | nindent 12 }}
+            - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
+              value: {{ .Values.timezone | quote }}
+            - name: GF_USERS_DEFAULT_THEME
+              value: dark
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: "false"
+            - name: GF_NEWS_NEWS_FEED_ENABLED
+              value: "false"
+            - name: GF_PLUGINS_PREINSTALL_DISABLED
+              value: "true"
+            - name: GF_LOG_MODE
+              value: console
+            {{- with $g.rootUrl }}
+            - name: GF_SERVER_ROOT_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $g.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml $g.resources | nindent 12 }}
+          securityContext:
+            {{- include "life-dashboard.containerSecurityContext" $g.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/grafana
+            - name: tmp
+              mountPath: /tmp
+            - name: datasource
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+      volumes:
+        - name: storage
+          {{- if $p.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (include "life-dashboard.componentName" (list . "grafana")) $p.existingClaim }}
+          {{- else }}
+          emptyDir:
+            sizeLimit: 1Gi
+          {{- end }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: datasource
+          configMap:
+            name: {{ include "life-dashboard.componentName" (list . "grafana-datasource") }}
+      {{- with $g.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $g.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $g.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "grafana") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "grafana") | nindent 4 }}
+  {{- with $g.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $g.service.type }}
+  selector:
+    {{- include "life-dashboard.selectorLabels" (list . "grafana") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $g.service.port }}
+      targetPort: http

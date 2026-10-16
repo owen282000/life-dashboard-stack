@@ -28,6 +28,8 @@ A token shorter than 16 characters keeps the API off; the receiver says so in it
 curl -H "Authorization: Bearer $API_TOKEN" http://localhost:8080/api/phones
 ```
 
+With the Helm chart, `receiver.api.enabled: true` switches it on, and the token is `API_TOKEN` in the release's Secret; see [Kubernetes](kubernetes.md#the-api-and-the-mcp-server).
+
 ## How it reads
 
 The API never uses the receiver's own database connection. It opens a connection of its own as `dash_ro`, a database user the receiver sets up at every start, right after it rebuilds the views:
@@ -36,7 +38,7 @@ The API never uses the receiver's own database connection. It opens a connection
 - Its sessions are read-only (`default_transaction_read_only`), set on the role and again by the API on every connection. A write fails on the read-only setting first and on the missing grants after that.
 - A query stops after 15 seconds.
 
-Its password is `DASH_DB_PASSWORD` in `.env`. The MCP server uses the same user.
+Its password is `DASH_DB_PASSWORD` in `.env`. The MCP server uses the same user. On CloudNativePG, the cluster's managed roles create `dash_ro` with its password instead, and the receiver only grants it its reads; see [Kubernetes](kubernetes.md#cnpg).
 
 ## Conventions
 

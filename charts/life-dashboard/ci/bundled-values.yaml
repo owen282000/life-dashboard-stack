@@ -1,0 +1,23 @@
+# The bundled Postgres StatefulSet, with NetworkPolicies.
+receiver:
+  api:
+    enabled: true
+mcp:
+  enabled: true
+demo:
+  enabled: true
+postgres:
+  mode: bundled
+  bundled:
+    storage:
+      size: 1Gi
+grafana:
+  persistence:
+    enabled: false
+networkPolicy:
+  enabled: true
+  postgres:
+    from:
+      - podSelector:
+          matchLabels:
+            app: backup

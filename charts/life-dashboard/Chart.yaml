@@ -1,0 +1,29 @@
+apiVersion: v2
+name: life-dashboard
+description: >-
+  The Life Dashboard Stack on Kubernetes: the receiver for the Life Dashboard Companion apps,
+  Postgres (CloudNativePG, a bundled StatefulSet or your own), Grafana with six dashboards,
+  and an optional read-only MCP server.
+type: application
+# One version for the whole stack: the chart, the four images it runs and docker-compose.yml
+# all carry the release version. scripts/prepare-release.sh sets both lines, and a release
+# tag must equal them.
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.29.0-0"
+home: https://github.com/owen282000/life-dashboard-stack
+sources:
+  - https://github.com/owen282000/life-dashboard-stack
+icon: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/brand/icon.png
+keywords:
+  - health
+  - screen-time
+  - grafana
+  - postgres
+  - cloudnative-pg
+  - self-hosted
+maintainers:
+  - name: owen282000
+    url: https://github.com/owen282000
+annotations:
+  artifacthub.io/license: MIT
