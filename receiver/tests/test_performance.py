@@ -20,7 +20,7 @@ TIMED = {
     "weight_days": "time", "sleep_nights": "time", "sleep_stages": "time", "workouts": "time",
     "screen_days": "time", "screen_apps": "time", "records_days": "time",
 }
-UNTIMED = ["installs", "type_summary"]
+UNTIMED = ["installs", "type_summary", "data_sources", "data_types"]
 
 
 def load_sample_data():

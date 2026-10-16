@@ -1,6 +1,6 @@
 # Ask your own AI (MCP)
 
-The stack has an optional MCP server, so a model you choose can read your history and answer questions such as "how did my sleep change in the weeks I ran more?". [MCP](https://modelcontextprotocol.io) is the standard way for a model to call tools. This server gives it six read-only tools on the same queries as the [read-only API](api.md).
+The stack has an optional MCP server, so a model you choose can read your history and answer questions such as "how did my sleep change in the weeks I ran more?". [MCP](https://modelcontextprotocol.io) is the standard way for a model to call tools. This server gives it eight read-only tools on the same queries as the [read-only API](api.md).
 
 ## Contents
 
@@ -28,6 +28,8 @@ Every tool returns a one-line summary for the model, then the data as compact JS
 | Tool | Parameters | Returns |
 |---|---|---|
 | `list_phones` | none | The phones with their platforms, device and app version, the last sync, and the first and last day with data. Also the time zone and today's date. The model should call it first. |
+| `data_catalog` | `phone` (optional) | What each phone has stored and what the other tools can answer from it: every type of data with its records, windows, the apps that wrote it and its first and last day, and per tool what has data (the `daily_summary` fields, the days of `sleep_nights`, `workouts` and `screen_time`, and every `trend` metric with its days). A type no tool reads is marked `read: false`. |
+| `sync_status` | `phone` (optional) | When each phone last sent a payload, per platform, and per type and writing app when the newest record arrived, how regularly it usually does, and whether it went quiet. |
 | `daily_summary` | `from_date`, `to_date`, `phone` (optional) | One row per phone and day: steps, distance, calories, sleep, exercise minutes and workouts, screen time, resting heart rate and weight. At most 92 days and 200 rows. |
 | `sleep_nights` | `from_date`, `to_date`, `phone` (optional) | One night per phone: bedtime, wake time, hours asleep and in bed, deep, light, REM and awake, and the overnight low heart rate. At most 92 days. |
 | `workouts` | `from_date`, `to_date`, `phone` (optional) | Every workout with its activity, start, end and minutes. At most 92 days and 100 workouts. |
@@ -45,6 +47,34 @@ demo-android: steps mean 8,596 steps per day from 2026-09-18 to 2026-10-15 (28 d
 ```json
 {"metric":"steps","days":28,"timezone":"Europe/Amsterdam","phones":[{"phone":"demo-android","metric":"steps","unit":"steps","period":{"from":"2026-09-18","to":"2026-10-15","days_with_data":28,"mean":8596.04,"min":5280.0,"min_day":"2026-09-29","max":14084.0,"max_day":"2026-09-19"},"previous":{"from":"2026-08-21","to":"2026-09-17","days_with_data":28,"mean":8736.11},"change":-140.07,"change_pct":-1.6}, ...]}
 ```
+
+### What a phone has, and what stopped arriving
+
+`data_catalog` and `sync_status` let a model find out what it can ask before it asks, instead of guessing at metrics a phone never sends. Both read the views [`dash.data_types` and `dash.data_sources`](views.md#data-and-sync), and both take an optional `phone`.
+
+`data_catalog` on the demo data, `{}`:
+
+```
+demo-android: 15 types; daily_summary 11 of 11 fields; trend 21 of 23 metrics; sleep_nights, workouts, screen_time have data; only on the dashboards: skin_temperature, steps; demo-iphone: 13 types; daily_summary 10 of 11 fields; trend 20 of 23 metrics; sleep_nights, workouts have data; only on the dashboards: steps.
+```
+
+```json
+{"timezone":"Europe/Amsterdam","today":"2026-10-17","phone":null,"phones":[{"phone":"demo-android","platforms":["Android","Screen time"],"tools":{"daily_summary":["steps","distance_km","active_kcal","total_kcal","sleep_h","in_bed_h","exercise_min","workouts","screen_min","resting_hr","weight_kg"],"sleep_nights":["2026-08-19","2026-10-16"],"workouts":["2026-08-20","2026-10-15"],"screen_time":["2026-08-13","2026-10-17"],"trend":{"steps":["2026-08-19","2026-10-16"],"hrv_rmssd":["2026-08-19","2026-10-16"],"vo2_max":["2026-08-23","2026-10-11"], ...}},"types":[{"type":"heart_rate","payload_source":"health_connect","records":17009,"windows":0,"sources":["com.garmin.android.apps.connectmobile"],"first_day":"2026-08-19","last_day":"2026-10-17","read":true},{"type":"steps","payload_source":"health_connect","records":1062,"windows":0,"sources":["com.garmin.android.apps.connectmobile","com.google.android.apps.fitness"],"first_day":"2026-08-19","last_day":"2026-10-16","read":false}, ...]}, ...],"truncated":false}
+```
+
+Steps per day come from the phone's `daily_totals`, which count a walk once across phone and watch, so the raw `steps` records are only on the dashboards. `sources` names the apps that wrote a type, as Health Connect or Apple Health report them: here the watch's app and the phone's own step counter.
+
+`sync_status` says, per phone, when each platform last sent a payload, and per type and writing app when its newest record is from and when it arrived. It compares that with the type's own rhythm, with one rule and no score: `active_days` is the number of days with data in the 28 days up to the newest record, `usual_gap_days` is 28 (or the days since the type's first record, when fewer) divided by that: 1 for a daily type, 7 for a weekly one, and a type is `quiet` once its newest record is more than twice that gap old. A weekly weighing is fine after 10 days; heart rate is quiet after 2. A writing app is quiet by the same rule when it wrote the type in those 28 days, so a watch that stopped while the phone still counts shows up even though the type keeps arriving. On the demo data nothing is quiet. For a test phone whose heart rate strap stopped about 3 days ago and whose sleep app stopped 4 days ago, `{"phone": "e2e-quiet"}` gives:
+
+```
+e2e-quiet: last payload 0.0 h ago (Android 0.0 h); quiet: sleep (newest 4.5 days ago, usually every 1.0 days); com.polar.beat stopped writing heart_rate 3.2 days ago.
+```
+
+```json
+{"timezone":"Europe/Amsterdam","today":"2026-10-17","phone":"e2e-quiet","phones":[{"phone":"e2e-quiet","last_received":"2026-10-17T01:23:57.536395+02:00","hours_since":0.0,"payload_sources":[{"payload_source":"health_connect","platform":"Android","app_version":"1.23.0","last_received":"2026-10-17T01:23:57.536395+02:00","hours_since":0.0,"payloads_24h":1,"last_sequence":1}],"quiet":["sleep"],"types":[{"type":"heart_rate","payload_source":"health_connect","last_day":"2026-10-16","last_time":"2026-10-16T22:59:57+02:00","last_received":"2026-10-17T01:23:57.536395+02:00","days_since":0.1,"active_days":20,"usual_gap_days":1.0,"quiet":false},{"type":"sleep","payload_source":"health_connect","last_day":"2026-10-12","last_time":"2026-10-12T13:23:57+02:00","last_received":"2026-10-17T01:23:57.536395+02:00","days_since":4.5,"active_days":14,"usual_gap_days":1.0,"quiet":true}],"sources":[{"type":"heart_rate","source_app":"com.google.android.apps.fitness","records":20,"windows":0,"last_time":"2026-10-16T22:59:57+02:00","last_received":"2026-10-17T01:23:57.536395+02:00","days_since":0.1,"quiet":false},{"type":"heart_rate","source_app":"com.polar.beat","records":15,"windows":0,"last_time":"2026-10-13T20:35:57+02:00","last_received":"2026-10-17T01:23:57.536395+02:00","days_since":3.2,"quiet":true},{"type":"sleep","source_app":"com.urbandroid.sleep","records":14,"windows":0,"last_time":"2026-10-12T13:23:57+02:00","last_received":"2026-10-17T01:23:57.536395+02:00","days_since":4.5,"quiet":true}]}],"truncated":false}
+```
+
+Both tools list at most 200 types and 200 apps; with more, `truncated` is true and the summary says to ask for one phone.
 
 ## Start the server
 
@@ -81,7 +111,7 @@ Open **Settings > Developer > Edit Config** in Claude Desktop and add, with the 
 }
 ```
 
-The path is the folder with your `docker-compose.yml` and `.env`. Restart Claude Desktop. The six tools show up under the tools button in a new chat. If Claude Desktop says it can't find `docker`, use its full path, such as `/usr/local/bin/docker`. If you started the stack with `-p <name>`, add `"-p", "<name>"` after `"compose"`.
+The path is the folder with your `docker-compose.yml` and `.env`. Restart Claude Desktop. The eight tools show up under the tools button in a new chat. If Claude Desktop says it can't find `docker`, use its full path, such as `/usr/local/bin/docker`. If you started the stack with `-p <name>`, add `"-p", "<name>"` after `"compose"`.
 
 Remember what goes where: the server runs on your machine, the conversation goes to Anthropic.
 
@@ -154,7 +184,7 @@ A model on your own hardware keeps the whole conversation at home. [Ollama](http
   }
   ```
 
-Small models do best with a direct question and a period: "Use trend for sleep_h over 28 days, then workouts for the same period, and tell me whether I slept longer on days I worked out." Six tools with fixed parameters are far easier for them than SQL.
+Small models do best with a direct question and a period: "Use trend for sleep_h over 28 days, then workouts for the same period, and tell me whether I slept longer on days I worked out." Eight tools with fixed parameters are far easier for them than SQL.
 
 ## Security
 

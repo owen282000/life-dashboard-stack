@@ -7,7 +7,7 @@ from conftest import REPO_DIR, query
 CONTRACT_VIEWS = [
     "installs", "activity_days", "steps_hourly", "steps_raw_days", "heart_rate", "heart_rate_hourly",
     "heart_days", "measurements", "measurement_days", "weight_days", "sleep_nights", "sleep_stages",
-    "workouts", "screen_days", "screen_apps", "type_summary", "records_days",
+    "workouts", "screen_days", "screen_apps", "type_summary", "records_days", "data_sources", "data_types",
 ]
 
 

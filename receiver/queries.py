@@ -90,6 +90,47 @@ METRICS: dict[str, dict] = {
 }
 
 
+# ------------------------------------------------------------------ what reads what
+
+# The payload keys each answer reads, for the catalog. A metric has data on a phone when
+# every key it names is stored there; HRV also needs the payload source that measures it
+# that way. The views read windows (buckets) of heart rate only, so for any other key
+# only records count.
+METRIC_TYPES: dict[str, tuple[tuple[str, ...], str | None]] = {
+    "steps": (("daily_totals",), None), "distance_km": (("daily_totals",), None),
+    "active_kcal": (("daily_totals",), None), "total_kcal": (("daily_totals",), None),
+    "exercise_min": (("exercise",), None),
+    "sleep_h": (("sleep",), None), "in_bed_h": (("sleep",), None),
+    "deep_sleep_h": (("sleep",), None), "rem_sleep_h": (("sleep",), None),
+    "sleep_hr_low": (("sleep", "heart_rate"), None),
+    "heart_rate": (("heart_rate",), None),
+    "resting_heart_rate": (("resting_heart_rate",), None),
+    "hrv_rmssd": (("heart_rate_variability",), "health_connect"),
+    "hrv_sdnn": (("heart_rate_variability",), "healthkit_ios"),
+    "oxygen_saturation": (("oxygen_saturation",), None),
+    "respiratory_rate": (("respiratory_rate",), None),
+    "vo2_max": (("vo2_max",), None),
+    "weight": (("weight",), None), "body_fat": (("body_fat",), None),
+    "systolic": (("blood_pressure",), None), "diastolic": (("blood_pressure",), None),
+    "blood_glucose": (("blood_glucose",), None),
+    "screen_min": (("screen_time",), None),
+}
+
+# The fields of /api/days (and daily_summary) and the key each one comes from.
+DAY_FIELDS: dict[str, str] = {
+    "steps": "daily_totals", "distance_km": "daily_totals", "active_kcal": "daily_totals",
+    "total_kcal": "daily_totals", "sleep_h": "sleep", "in_bed_h": "sleep",
+    "exercise_min": "exercise", "workouts": "exercise", "screen_min": "screen_time",
+    "resting_hr": "resting_heart_rate", "weight_kg": "weight",
+}
+
+# The lists of nights, workouts and screen time, and the key each one reads.
+LISTS: dict[str, str] = {"sleep": "sleep", "workouts": "exercise", "screen_time": "screen_time"}
+
+WINDOWS_READ = {"heart_rate"}  # keys whose windows the views read
+CADENCE_DAYS = 28               # the window of dash.data_types' cadence
+
+
 # ------------------------------------------------------------------ input checks
 
 def parse_day(value, name: str) -> date:
@@ -337,6 +378,139 @@ class Reader:
             out.append(_trend_entry(name, metric, spec, cur, prev, (start, end), (prev_start, prev_end), days))
         return out
 
+    # -------------------------------------------------------------- catalog and sync
+
+    def _installs(self, phone: str | None) -> list[dict]:
+        return self._all(
+            """
+            SELECT install, payload_source, platform, device, app_version, last_received, hours_since,
+                   payloads_24h, last_sequence
+            FROM dash.installs WHERE %(phone)s::text IS NULL OR install = %(phone)s
+            ORDER BY install, payload_source
+            """,
+            {"phone": phone},
+        )
+
+    def catalog(self, phone: str | None, limit: int) -> tuple[list[dict], bool]:
+        """Per phone: the stored types with their days and writing apps, and what reads them."""
+        installs = self._installs(phone)
+        rows = self._all(
+            """
+            SELECT install, type, payload_source, records, windows, sources, first_day, last_day
+            FROM dash.data_types WHERE %(phone)s::text IS NULL OR install = %(phone)s
+            ORDER BY install, type, payload_source
+            LIMIT %(limit)s
+            """,
+            {"phone": phone, "limit": limit + 1},
+        )
+        types, truncated = _capped(rows, limit)
+        out = []
+        for name in dict.fromkeys(i["install"] for i in installs):
+            mine = [t for t in types if t["install"] == name]
+            reads, used = _reads(mine)
+            out.append({
+                "phone": name,
+                "platforms": sorted({i["platform"] for i in installs if i["install"] == name}),
+                "types": [{**{k: v for k, v in t.items() if k != "install"}, "read": id(t) in used}
+                          for t in mine],
+                "reads": reads,
+            })
+        return out, truncated
+
+    def sync(self, phone: str | None, limit: int) -> tuple[list[dict], bool]:
+        """Per phone: the last payload per source, and when each type and app last arrived."""
+        installs = self._installs(phone)
+        params = {"phone": phone, "limit": limit + 1}
+        types = self._all(
+            """
+            SELECT install, type, payload_source, last_day, last_time, last_received, days_since,
+                   active_days, usual_gap_days, quiet
+            FROM dash.data_types WHERE %(phone)s::text IS NULL OR install = %(phone)s
+            ORDER BY install, type, payload_source
+            LIMIT %(limit)s
+            """,
+            params,
+        )
+        sources = self._all(
+            """
+            SELECT install, type, payload_source, source_app, records, windows, last_time, last_received,
+                   extract(epoch FROM now() - last_time)::float8 / 86400 AS days_since
+            FROM dash.data_sources WHERE %(phone)s::text IS NULL OR install = %(phone)s
+            ORDER BY install, type, payload_source, last_time DESC, source_app
+            LIMIT %(limit)s
+            """,
+            params,
+        )
+        by_type = {(t["install"], t["type"], t["payload_source"]): t for t in types}
+        for s in sources:
+            s["quiet"] = _source_quiet(s, by_type.get((s["install"], s["type"], s["payload_source"])))
+        types, cut_types = _capped(types, limit)
+        sources, cut_sources = _capped(sources, limit)
+        out = []
+        for name in dict.fromkeys(i["install"] for i in installs):
+            mine = [i for i in installs if i["install"] == name]
+            seen = [i["last_received"] for i in mine if i["last_received"] is not None]
+            hours = [i["hours_since"] for i in mine if i["hours_since"] is not None]
+            out.append({
+                "phone": name,
+                "last_received": _value(max(seen)) if seen else None,
+                "hours_since": _value(min(hours)) if hours else None,
+                "payload_sources": [_clean({k: v for k, v in i.items() if k not in ("install", "device")})
+                                    for i in mine],
+                "quiet": [t["type"] for t in types if t["install"] == name and t["quiet"]],
+                "types": [{k: v for k, v in t.items() if k != "install"} for t in types if t["install"] == name],
+                "sources": [{k: v for k, v in s.items() if k not in ("install", "payload_source")}
+                            for s in sources if s["install"] == name],
+            })
+        return out, cut_types or cut_sources
+
+
+def _readable(types: list[dict], key: str, source: str | None = None) -> list[dict]:
+    """The rows of one key that the views read: its records, or for heart rate its windows too."""
+    return [t for t in types if t["type"] == key and (source is None or t["payload_source"] == source)
+            and (t["records"] > 0 or (key in WINDOWS_READ and t["windows"] > 0))]
+
+
+def _span(rows: list[dict]) -> list[str] | None:
+    """[first day, last day] over the rows, or None without rows."""
+    if not rows:
+        return None
+    return [min(r["first_day"] for r in rows), max(r["last_day"] for r in rows)]
+
+
+def _reads(types: list[dict]) -> tuple[dict, set[int]]:
+    """What one phone's stored types answer, and which of its rows something reads."""
+    used: set[int] = set()
+
+    def take(key, source=None):
+        rows = _readable(types, key, source)
+        used.update(id(r) for r in rows)
+        return rows
+
+    reads: dict = {"days": [field for field, key in DAY_FIELDS.items() if take(key)]}
+    for name, key in LISTS.items():
+        reads[name] = _span(take(key))
+    metrics = {}
+    for metric, (keys, source) in METRIC_TYPES.items():
+        spans = [_span(take(key, source)) for key in keys]
+        if all(spans):
+            first, last = max(s[0] for s in spans), min(s[1] for s in spans)
+            if first <= last:
+                metrics[metric] = [first, last]
+    reads["metrics"] = metrics
+    return reads, used
+
+
+def _source_quiet(source: dict, kind: dict | None) -> bool | None:
+    """The type's rule for one writing app: quiet when it wrote the type in the 28 days up to
+    the type's newest record and its own newest record is older than twice the type's usual
+    gap. An app that stopped before those 28 days is history, not quiet. None when the type
+    has no cadence."""
+    if kind is None or kind["quiet"] is None or source["days_since"] is None:
+        return None
+    recent = source["last_time"].date() > kind["last_day"] - timedelta(days=CADENCE_DAYS)
+    return recent and source["days_since"] > 2 * kind["usual_gap_days"]
+
 
 def _stats(items: list[dict], days: int, sum_metric: bool) -> dict:
     values = [r["value"] for r in items]
@@ -374,10 +548,14 @@ def _trend_entry(phone, metric, spec, cur, prev, period, prev_period, days) -> d
 
 @contextmanager
 def open_reader(conninfo: str = ""):
-    """A Reader on a new read-only connection. An empty conninfo uses the PG* variables."""
+    """A Reader on a new read-only connection. An empty conninfo uses the PG* variables.
+
+    JIT is off: these queries take tens of milliseconds, and compiling one costs more than
+    that (0.3 s for the catalog over a year of four phones).
+    """
     conn = psycopg.connect(
         conninfo, autocommit=True, row_factory=dict_row, connect_timeout=5,
-        options=f"-c default_transaction_read_only=on -c statement_timeout={STATEMENT_TIMEOUT}",
+        options=f"-c default_transaction_read_only=on -c statement_timeout={STATEMENT_TIMEOUT} -c jit=off",
     )
     try:
         yield Reader(conn)

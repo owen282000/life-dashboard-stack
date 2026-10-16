@@ -570,3 +570,98 @@ FROM (
     GROUP BY d."time", d.day, r.install, r.type
 ) x
 GROUP BY x."time", x.day, x.install, x.type;
+
+-- What is stored per install, payload source, type and writing app, from records and from
+-- the windows in buckets (a window counts for each app in its sources, or once without
+-- one). Day records are at local midnight of their date, like the day views.
+CREATE VIEW dash.data_sources AS
+SELECT x.install,
+       x.payload_source,
+       x.type,
+       x.source_app,
+       sum(x.records)::bigint AS records,
+       sum(x.windows)::bigint AS windows,
+       CASE WHEN x.type IN ('daily_totals', 'screen_time')
+            THEN dash.day_start((min(x.first_time) AT TIME ZONE 'UTC')::date)
+            ELSE min(x.first_time) END AS first_time,
+       CASE WHEN x.type IN ('daily_totals', 'screen_time')
+            THEN dash.day_start((max(x.last_time) AT TIME ZONE 'UTC')::date)
+            ELSE max(x.last_time) END AS last_time,
+       max(x.last_received) AS last_received
+FROM (
+    SELECT r.install, r.payload_source, r.type, r.source_app,
+           count(*) AS records, 0 AS windows,
+           min(r.ts) AS first_time, max(r.ts) AS last_time, max(r.received_at) AS last_received
+    FROM records r
+    GROUP BY r.install, r.payload_source, r.type, r.source_app
+    UNION ALL
+    SELECT b.install, b.payload_source, b.type, s.source_app,
+           0, count(*), min(b.bucket_start), max(b.bucket_start), max(b.received_at)
+    FROM buckets b
+    LEFT JOIN LATERAL unnest(b.sources) AS s(source_app) ON true
+    GROUP BY b.install, b.payload_source, b.type, s.source_app
+) x
+GROUP BY x.install, x.payload_source, x.type, x.source_app;
+
+-- One row per install, payload source and type, with how often the type usually arrives.
+-- The cadence counts the local days with a record or window in the 28 days up to the
+-- newest one (fewer when the type is younger), one index probe per day. A type is quiet
+-- when its newest record is older than twice its usual gap; with records on only one of
+-- those days there is no cadence to compare with, and quiet is NULL.
+CREATE VIEW dash.data_types AS
+WITH t AS (
+    SELECT s.install, s.payload_source, s.type,
+           sum(s.records)::bigint AS records,
+           coalesce(array_agg(s.source_app ORDER BY s.source_app)
+                        FILTER (WHERE s.source_app IS NOT NULL), '{}') AS sources,
+           min(s.first_time) AS first_time,
+           max(s.last_time) AS last_time,
+           max(s.last_received) AS last_received,
+           dash.local_day(min(s.first_time)) AS first_day,
+           dash.local_day(max(s.last_time)) AS last_day
+    FROM dash.data_sources s
+    GROUP BY s.install, s.payload_source, s.type
+),
+-- Windows once each, also those with two sources.
+w AS (
+    SELECT b.install, b.payload_source, b.type, count(*) AS windows
+    FROM buckets b
+    GROUP BY b.install, b.payload_source, b.type
+)
+SELECT t.install,
+       t.payload_source,
+       t.type,
+       t.records,
+       coalesce(w.windows, 0)::bigint AS windows,
+       t.sources,
+       t.first_time,
+       t.last_time,
+       t.first_day,
+       t.last_day,
+       t.last_received,
+       a.days AS active_days,
+       a.span::double precision / a.days AS usual_gap_days,
+       extract(epoch FROM now() - t.last_time)::double precision / 86400 AS days_since,
+       CASE WHEN a.days >= 2
+            THEN extract(epoch FROM now() - t.last_time) / 86400 > 2 * a.span::double precision / a.days
+       END AS quiet
+FROM t
+LEFT JOIN w ON w.install = t.install AND w.payload_source = t.payload_source AND w.type = t.type
+CROSS JOIN LATERAL (
+    SELECT least(28, t.last_day - t.first_day + 1) AS span,
+           greatest(count(*), 1)::int AS days
+    FROM generate_series(0, 27) AS g(n)
+    WHERE g.n <= t.last_day - t.first_day
+      AND CASE WHEN t.type IN ('daily_totals', 'screen_time')
+               THEN EXISTS (SELECT 1 FROM records r
+                            WHERE r.type = t.type AND r.install = t.install AND r.day = t.last_day - g.n)
+               ELSE EXISTS (SELECT 1 FROM records r
+                            WHERE r.type = t.type AND r.install = t.install
+                              AND r.ts >= dash.day_start(t.last_day - g.n)
+                              AND r.ts < dash.day_start(t.last_day - g.n + 1))
+                    OR EXISTS (SELECT 1 FROM buckets b
+                               WHERE b.type = t.type AND b.install = t.install
+                                 AND b.bucket_start >= dash.day_start(t.last_day - g.n)
+                                 AND b.bucket_start < dash.day_start(t.last_day - g.n + 1))
+          END
+) a;

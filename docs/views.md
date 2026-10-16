@@ -416,6 +416,46 @@ Stored records per type and local day. Day records count on their own date.
 | `records` | integer | Rows |
 | `complete` | boolean | `day` is before today |
 
+### `dash.data_sources`
+
+What is stored per install, payload source, type and writing app, from `records` and from the windows in `buckets`. Unlike `type_summary` it counts windows too, so a series sent per time window shows up. The [API](api.md#get-apisync) and the [MCP server](mcp.md) read it to show which app stopped writing a type.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `install` | text | |
+| `payload_source` | text | |
+| `type` | text | The payload key, such as `heart_rate` |
+| `source_app` | text | The app that wrote it (the record's `source`); for a window, each app in its `sources` gets the window. NULL when the payload names none, as for `daily_totals` and `screen_time` |
+| `records` | bigint | Stored records |
+| `windows` | bigint | Stored windows |
+| `first_time` | timestamptz | Earliest record time or window start; for a day record (`daily_totals`, `screen_time`), local midnight of its date |
+| `last_time` | timestamptz | Latest record time or window start, the same way |
+| `last_received` | timestamptz | When the receiver last stored one of them |
+
+### `dash.data_types`
+
+One row per install, payload source and type: what is stored, which apps wrote it, and how regularly it arrives. It answers "what data does this phone have" and "did something stop arriving".
+
+| Column | Type | Meaning |
+|---|---|---|
+| `install` | text | |
+| `payload_source` | text | |
+| `type` | text | The payload key |
+| `records` | bigint | Stored records |
+| `windows` | bigint | Stored windows; a window with two sources counts once |
+| `sources` | text[] | The apps that wrote it, sorted; empty when the payload names none |
+| `first_time` | timestamptz | Earliest record time or window start, as in `data_sources` |
+| `last_time` | timestamptz | Latest record time or window start |
+| `first_day` | date | Local date of `first_time` |
+| `last_day` | date | Local date of `last_time` |
+| `last_received` | timestamptz | When the receiver last stored a record or window of the type: the last sync that brought any |
+| `active_days` | integer | Local days with a record or window in the 28 days up to and including `last_day` (fewer days when `first_day` is later) |
+| `usual_gap_days` | double precision | Those days (at most 28) divided by `active_days`: 1 for a type that arrives every day, 7 for one that arrives weekly |
+| `days_since` | double precision | Days from `last_time` to now |
+| `quiet` | boolean | `days_since` is more than twice `usual_gap_days`: a daily type after 2 days without a record, a weekly one after 14. NULL when `active_days` is 1, as there is no cadence to compare with |
+
+The cadence is counted per install and type, across payload sources. A sync that brings nothing new of a type leaves its `last_received` as it was, so a type you measure weekly has an old `last_received` while syncs run fine; `quiet` compares with the type's own rhythm for that reason. The view reads every record once, like `type_summary`: about 0.15 s for a year of four phones with 1.5 million records.
+
 ## Storage underneath
 
 You rarely need these, but they explain the views.

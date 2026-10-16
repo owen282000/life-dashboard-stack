@@ -143,7 +143,7 @@ Days are local days in your time zone, a missing day is a gap rather than a zero
 
 ## Ask your own AI (MCP)
 
-[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The stack's optional MCP server gives the model you choose six read-only tools on your history: `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
+[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The stack's optional MCP server gives the model you choose eight read-only tools on your history: `list_phones`, `data_catalog`, `sync_status`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
 
 ```bash
 echo "MCP_TOKEN=$(openssl rand -hex 32)" >> .env

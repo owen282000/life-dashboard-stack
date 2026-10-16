@@ -32,7 +32,7 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 ## The read-only API and `dash_ro`
 
-- With `API_TOKEN` set, the receiver answers `GET` requests under `/api/` on its own port: `/api/phones`, `/api/days`, `/api/sleep`, `/api/workouts`, `/api/screen-time`, `/api/series` and `/api/trend`, with the parameters, fields, metric names and units in [api.md](api.md). Fields and metrics may be added; none are renamed, removed or given another unit. Without a token every `/api/` path is a 404.
+- With `API_TOKEN` set, the receiver answers `GET` requests under `/api/` on its own port: `/api/phones`, `/api/days`, `/api/sleep`, `/api/workouts`, `/api/screen-time`, `/api/series`, `/api/trend`, and from 1.1 `/api/catalog` and `/api/sync`, with the parameters, fields, metric names and units in [api.md](api.md). Fields and metrics may be added; none are renamed, removed or given another unit. Without a token every `/api/` path is a 404.
 - `Authorization: Bearer <API_TOKEN>`, a 401 without it, a 400 for bad input, a 404 for an unknown phone, and the limits of 400 days per range and 5,000 rows per answer. A limit may be raised, never lowered.
 - The role `dash_ro`, with its password from `DASH_DB_PASSWORD`: `USAGE` on `dash`, `SELECT` on every view in it, and nothing else, with read-only transactions and a 15-second statement timeout.
 
@@ -40,7 +40,7 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 - The image `ghcr.io/owen282000/life-dashboard-mcp` and the Compose service `mcp` in the profile `mcp`, listening on 8090 inside its container and as the default of `MCP_PORT`.
 - Streamable HTTP at `/mcp` with `Authorization: Bearer <MCP_TOKEN>`, `GET /health` without it, and stdio with `python server.py --stdio`.
-- The tools `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`, with the parameters and result fields in [mcp.md](mcp.md). Tools, parameters with a default, and fields may be added; none are renamed or removed. Every tool stays read-only.
+- The tools `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`, and from 1.1 `data_catalog` and `sync_status`, with the parameters and result fields in [mcp.md](mcp.md). Tools, parameters with a default, and fields may be added; none are renamed or removed. Every tool stays read-only.
 
 ## The environment variables
 

@@ -6,8 +6,15 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ### Added
 
+- Two MCP tools, so a model knows what it can ask before it asks. `data_catalog` lists per phone every type of data that is stored, with its records, the apps that wrote it and its first and last day, and per tool what has data: the `daily_summary` fields, the days of `sleep_nights`, `workouts` and `screen_time`, and every `trend` metric. `sync_status` says when each phone last sent a payload, and per type and writing app when the newest record arrived, how regularly it usually does and whether it went quiet: a daily type after 2 days without a record, a weekly one after 14. Both take an optional `phone`. The server now has eight read-only tools.
+- `/api/catalog` and `/api/sync` give the same in the read-only API.
+- The views `dash.data_types` (per phone and type: records, windows, sources, first and last day, and the cadence and `quiet` above) and `dash.data_sources` (the same per writing app, counting the windows of series sent per time window too), described in [docs/views.md](docs/views.md#data-and-sync). `grafana_ro` and `dash_ro` can read them.
 - The MCP server is listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.owen282000/life-dashboard`: `server.json` describes the image over stdio on the stack's Docker network, the MCP image carries the label the registry checks, and each release publishes the new version. It reads the stack's database, so it still needs a running stack.
 - The Helm chart is on [Artifact Hub](https://artifacthub.io/packages/search?repo=life-dashboard), with its category, the four images, links, screenshots of the dashboards and each version's changes from this changelog. Each release also pushes `charts/artifacthub-repo.yml` to the chart's repository, which makes it a verified publisher there.
+
+### Changed
+
+- The API and the MCP server switch off Postgres's JIT for their connections. Their queries take milliseconds, and compiling one took longer than running it.
 
 ## [1.0.1] - 2026-10-16
 
