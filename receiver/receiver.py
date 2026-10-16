@@ -57,6 +57,8 @@ MAX_BODY = 32 * 1024 * 1024
 LABEL_RE = re.compile(r"^/webhook(?:/([a-z0-9_-]{1,32}))?$")
 TOKEN_IN_PATH_RE = re.compile(r"([?&]token=)[^&\s\"]*")
 MIGRATION_LOCK = 4_242_017  # pg_advisory_lock key, the same constant in every receiver
+CONNECT_TIMEOUT = 5         # seconds, for the connection of every payload
+SHUTDOWN_GRACE = 10         # seconds that requests in flight get to finish on SIGTERM
 
 # Envelope keys that are never record arrays.
 ENVELOPE_KEYS = {
@@ -69,6 +71,31 @@ DAY_TYPES = {"daily_totals", "screen_time"}
 TIME_FIELDS = ("time", "end_time", "session_end_time")
 
 READY = threading.Event()
+STOP = threading.Event()
+
+
+class InFlight:
+    """Counts the requests being handled, so a shutdown can wait for them."""
+
+    def __init__(self):
+        self.count = 0
+        self.cond = threading.Condition()
+
+    def __enter__(self):
+        with self.cond:
+            self.count += 1
+
+    def __exit__(self, *exc):
+        with self.cond:
+            self.count -= 1
+            self.cond.notify_all()
+
+    def wait_idle(self, timeout: float) -> bool:
+        with self.cond:
+            return self.cond.wait_for(lambda: self.count == 0, timeout)
+
+
+IN_FLIGHT = InFlight()
 
 # The ordering rule: an incoming write loses only when it is older on sequence (or has
 # none) AND older on build time. It applies against the stored row and against the
@@ -315,7 +342,9 @@ def ingest(dsn: str, install: str, body: bytes) -> tuple[int, dict]:
     deletions = payload.get("deleted_records") if isinstance(payload.get("deleted_records"), list) else []
     deleted = 0
 
-    with psycopg.connect(dsn) as conn:
+    # A short connect timeout: during a failover a request fails fast, and the app sends the
+    # payload again, instead of holding the connection open.
+    with psycopg.connect(dsn, connect_timeout=CONNECT_TIMEOUT) as conn:
         with conn.transaction(), conn.cursor() as cur:
             cur.execute(
                 """
@@ -368,14 +397,31 @@ class SetupError(Exception):
     pass
 
 
-def wait_for_db(dsn: str, retries: int = 60) -> None:
+# A wrong password, a user that may not log in, or a database that doesn't exist won't fix
+# itself by waiting. libpq reports a refused login without a SQLSTATE, so the server's
+# message counts as well.
+FATAL_SQLSTATES = {"28P01", "28000", "3D000"}
+FATAL_MESSAGES = re.compile(
+    r"password authentication failed|no pg_hba\.conf entry|is not permitted to log in"
+    r"|(database|role) \"[^\"]*\" does not exist")
+
+
+def wait_for_db(dsn: str, retries: int = 60, pause: float = 2) -> None:
+    """Wait until the database accepts a connection; log each new reason it doesn't."""
+    last = None
     for _ in range(retries):
         try:
             with psycopg.connect(dsn, connect_timeout=3):
                 return
-        except psycopg.OperationalError:
-            time.sleep(2)
-    raise SetupError("database unreachable, giving up")
+        except psycopg.OperationalError as exc:
+            reason = str(exc).strip() or type(exc).__name__
+            if exc.sqlstate in FATAL_SQLSTATES or FATAL_MESSAGES.search(reason):
+                raise SetupError(f"the database refused the connection: {reason}") from exc
+            if reason != last:
+                log(f"waiting for the database: {reason}")
+                last = reason
+            time.sleep(pause)
+    raise SetupError(f"database unreachable, giving up. The last error: {last}")
 
 
 def check_timezone(conn, tz: str) -> None:
@@ -480,6 +526,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):  # noqa: N802
+        with IN_FLIGHT:
+            self._get()
+
+    def do_POST(self):  # noqa: N802
+        with IN_FLIGHT:
+            self._post()
+
+    def _get(self):
         path, _, query = self.path.partition("?")
         if path == "/health":
             if READY.is_set():
@@ -518,7 +572,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html)
 
-    def do_POST(self):  # noqa: N802
+    def _post(self):
         match = LABEL_RE.match(self.path.split("?", 1)[0])
         if match is None:
             self.close_connection = True
@@ -564,10 +618,17 @@ class Handler(BaseHTTPRequestHandler):
         print(f"{self.address_string()} {text}", flush=True)
 
 
+def stop(*_):
+    """SIGTERM: before the database is set up, exit at once; after, shut down gracefully."""
+    if not READY.is_set():
+        sys.exit(0)
+    STOP.set()
+
+
 def main() -> None:
     # As PID 1 in its container, Python ignores SIGTERM unless it handles it, and docker
-    # stop would wait for its timeout and then kill it.
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    # stop or a rollout would wait for its timeout and then kill it.
+    signal.signal(signal.SIGTERM, stop)
     warning = secret_warning(SECRET)
     if warning:
         log(warning)
@@ -589,7 +650,14 @@ def main() -> None:
         log(f"PAIRING_TOKEN is ignored: it needs at least {pairing.MIN_TOKEN} characters")
     if PAIRING_LOG:
         print(pairing.log_block(PUBLIC_URL, SECRET), flush=True)
-    threading.Event().wait()
+    STOP.wait()
+    # Stop taking new connections, then give the requests in flight a moment to finish, so
+    # a rollout doesn't cut off a payload halfway.
+    server.shutdown()
+    if not IN_FLIGHT.wait_idle(SHUTDOWN_GRACE):
+        log(f"stopping with {IN_FLIGHT.count} request(s) still running after {SHUTDOWN_GRACE} s")
+    server.server_close()
+    print("receiver stopped", flush=True)
 
 
 if __name__ == "__main__":

@@ -45,6 +45,7 @@ def test_no_long_dashes_in_shipped_text():
                  *REPO_DIR.glob("*/Dockerfile"),
                  REPO_DIR / "receiver" / "api.py", REPO_DIR / "receiver" / "queries.py",
                  REPO_DIR / "receiver" / "roles.py", REPO_DIR / "receiver" / "tests" / "test_roles.py",
+                 REPO_DIR / "receiver" / "tests" / "test_lifecycle.py",
                  REPO_DIR / "docs" / "api.md", REPO_DIR / "docs" / "mcp.md",
                  *(REPO_DIR / "mcp").rglob("*.py"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql")]:
