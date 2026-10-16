@@ -44,7 +44,8 @@ def test_no_long_dashes_in_shipped_text():
                  *(REPO_DIR / ".github" / "workflows").glob("*.yml"),
                  *REPO_DIR.glob("*/Dockerfile"),
                  REPO_DIR / "receiver" / "api.py", REPO_DIR / "receiver" / "queries.py",
-                 REPO_DIR / "docs" / "api.md",
+                 REPO_DIR / "docs" / "api.md", REPO_DIR / "docs" / "mcp.md",
+                 *(REPO_DIR / "mcp").rglob("*.py"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql")]:
         text = path.read_text()
         assert "\u2013" not in text and "\u2014" not in text, path

@@ -1,4 +1,4 @@
-# The three images build from the repository root (docker build -f <image>/Dockerfile .).
+# The four images build from the repository root (docker build -f <image>/Dockerfile .).
 # Only what they copy is sent to the builder.
 *
 !receiver/receiver.py
@@ -8,6 +8,8 @@
 !receiver/views.sql
 !receiver/requirements.txt
 !receiver/migrations/
+!mcp/server.py
+!mcp/requirements.txt
 !tools/sample_data.py
 !tools/pg-guard.sh
 !tools/upgrade-postgres.sh

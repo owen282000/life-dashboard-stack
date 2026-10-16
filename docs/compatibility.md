@@ -36,15 +36,21 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 - `Authorization: Bearer <API_TOKEN>`, a 401 without it, a 400 for bad input, a 404 for an unknown phone, and the limits of 400 days per range and 5,000 rows per answer. A limit may be raised, never lowered.
 - The role `dash_ro`, with its password from `DASH_DB_PASSWORD`: `USAGE` on `dash`, `SELECT` on every view in it, and nothing else, with read-only transactions and a 15-second statement timeout.
 
+## The MCP server
+
+- The image `ghcr.io/owen282000/life-dashboard-mcp` and the Compose service `mcp` in the profile `mcp`, listening on 8090 inside its container and as the default of `MCP_PORT`.
+- Streamable HTTP at `/mcp` with `Authorization: Bearer <MCP_TOKEN>`, `GET /health` without it, and stdio with `python server.py --stdio`.
+- The tools `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`, with the parameters and result fields in [mcp.md](mcp.md). Tools, parameters with a default, and fields may be added; none are renamed or removed. Every tool stays read-only.
+
 ## The environment variables
 
-The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN` and `DASH_DB_PASSWORD`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
+The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN`, `DASH_DB_PASSWORD`, `MCP_TOKEN` and `MCP_PORT`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
 
 ## The ports, services and volumes
 
 - The receiver listens on 8080 and Grafana on 3000, inside their containers and as the defaults of `RECEIVER_PORT` and `GRAFANA_PORT`. Postgres isn't published.
-- The Compose services `db`, `receiver` and `grafana`, and the volumes `pgdata` (Postgres), `grafana-data` (Grafana) and `db-data` (the old Postgres 16 volume). Renaming a volume would leave your data behind, so that never happens within a major version.
-- The images `ghcr.io/owen282000/life-dashboard-receiver`, `-grafana` and `-db`, tagged `1.2.3`, `1.2`, `1` and `latest`. `LIFEDASH_VERSION=1` follows every 1.x release.
+- The Compose services `db`, `receiver` and `grafana`, `mcp` in the profile `mcp`, and the volumes `pgdata` (Postgres), `grafana-data` (Grafana) and `db-data` (the old Postgres 16 volume). Renaming a volume would leave your data behind, so that never happens within a major version.
+- The images `ghcr.io/owen282000/life-dashboard-receiver`, `-grafana`, `-db` and `-mcp`, tagged `1.2.3`, `1.2`, `1` and `latest`. `LIFEDASH_VERSION=1` follows every 1.x release.
 
 ## What can change in a minor version
 
