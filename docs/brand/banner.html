@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--
+  Source for the repository banner (docs/social-preview.png, 1280x640, GitHub social preview size).
+
+  Rendered with headless Chrome, from the repository root:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --screenshot=docs/social-preview.png --window-size=1280,640 \
+      --hide-scrollbars --force-device-scale-factor=1 "file://$PWD/docs/brand/banner.html"
+
+  The PNG is uploaded by hand, under Settings > General > Social preview.
+
+  Same layout as the Android and iOS apps' banner.html (life-dashboard-companion-app and
+  life-dashboard-companion-ios): background #14181C to #101C1C, heartbeat green #30B77E, the
+  name and tagline on the left, the heartbeat under them and a kicker along the bottom. Where
+  the apps draw a phone, the stack shows its own Overview dashboard: the screenshot behind
+  docs/readme-hero.png (docs/screenshots/readme/overview.png, the demo profile's sample data),
+  cropped to its first tiles and the 7-day table, with its steps per day panel
+  (overview-steps.png) lifted in front.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    background: radial-gradient(130% 130% at 25% 20%, #171D21 0%, #14181C 45%, #101C1C 100%);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    position: relative; color: #fff;
+  }
+  .grid {
+    position: absolute; right: 0; bottom: 0; width: 46%; height: 78%;
+    background-image:
+      linear-gradient(to right, rgba(48,183,126,0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(48,183,126,0.06) 1px, transparent 1px);
+    background-size: 46px 46px;
+    -webkit-mask-image: radial-gradient(100% 100% at 100% 100%, black 30%, transparent 78%);
+  }
+  .text { position: absolute; left: 84px; top: 84px; }
+  h1 { font-size: 80px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; }
+  h1 .accent { color: #30B77E; display: block; }
+  .tagline { margin-top: 26px; font-size: 31px; line-height: 1.3; color: #B9C2C6; font-weight: 400; }
+  .kicker {
+    position: absolute; left: 84px; bottom: 52px;
+    font-size: 25px; font-weight: 700; color: #30B77E; letter-spacing: 0.2px; white-space: nowrap;
+  }
+  .kicker .dim { color: #1E5C45; padding: 0 8px; }
+  svg.beat { position: absolute; left: 62px; bottom: 112px; }
+
+  /* The Overview dashboard, bleeding off the right edge like a window behind the text. */
+  .shot {
+    position: absolute; left: 716px; top: 76px; width: 640px; height: 420px;
+    border-radius: 22px; overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.12);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 80px rgba(48,183,126,0.10);
+  }
+  /* overview.png is 3200 x 1664 (1600 CSS px at scale 2), shown at 0.72 of its CSS size: the
+     first three tiles, the 7-day table and the top of the sleep stages. */
+  .shot img { position: absolute; left: -6px; top: -4px; width: 1152px; height: auto; display: block; }
+  /* Its steps per day panel on its own (overview-steps.png, 452 x 306 CSS px), lifted in front. */
+  .panel {
+    position: absolute; left: 872px; top: 268px; width: 384px; height: 260px;
+    border-radius: 14px; overflow: hidden; border: 2px solid rgba(48,183,126,0.45);
+    box-shadow: 0 28px 60px rgba(0,0,0,0.6), 0 0 60px rgba(48,183,126,0.16);
+  }
+  .panel img { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+
+  <div class="shot"><img src="../screenshots/readme/overview.png" alt=""></div>
+  <div class="panel"><img src="../screenshots/readme/overview-steps.png" alt=""></div>
+
+  <div class="text">
+    <h1>Life Dashboard<span class="accent">Stack</span></h1>
+    <div class="tagline">Your phone's health data and screen time,<br>in your own Postgres and Grafana.</div>
+  </div>
+
+  <svg class="beat" width="620" height="150" viewBox="0 0 620 150">
+    <defs>
+      <filter id="glow" x="-30%" y="-80%" width="160%" height="260%">
+        <feGaussianBlur stdDeviation="7" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g filter="url(#glow)">
+      <path d="M22 78 L250 78 L282 28 L315 122 L340 55 L360 78 L540 78"
+            fill="none" stroke="#30B77E" stroke-width="9"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="540" cy="78" r="11" fill="#30B77E"/>
+      <path d="M562 61 A 26 26 0 0 1 562 95" fill="none" stroke="#30B77E"
+            stroke-width="9" stroke-linecap="round" opacity="0.85"/>
+      <path d="M580 47 A 48 48 0 0 1 580 109" fill="none" stroke="#30B77E"
+            stroke-width="9" stroke-linecap="round" opacity="0.5"/>
+    </g>
+  </svg>
+
+  <div class="kicker">Six dashboards <span class="dim">|</span> MCP for the AI you choose <span class="dim">|</span> Compose or Helm <span class="dim">|</span> No cloud</div>
+</body>
+</html>
