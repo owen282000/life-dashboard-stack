@@ -4,6 +4,11 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Added
+
+- The MCP server is listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.owen282000/life-dashboard`: `server.json` describes the image over stdio on the stack's Docker network, the MCP image carries the label the registry checks, and each release publishes the new version. It reads the stack's database, so it still needs a running stack.
+- The Helm chart is on [Artifact Hub](https://artifacthub.io/packages/search?repo=life-dashboard), with its category, the four images, links, screenshots of the dashboards and each version's changes from this changelog. Each release also pushes `charts/artifacthub-repo.yml` to the chart's repository, which makes it a verified publisher there.
+
 ## [1.0.1] - 2026-10-16
 
 ### Security

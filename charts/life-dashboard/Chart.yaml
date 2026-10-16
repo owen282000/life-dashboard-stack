@@ -6,8 +6,8 @@ description: >-
   and an optional read-only MCP server.
 type: application
 # One version for the whole stack: the chart, the four images it runs and docker-compose.yml
-# all carry the release version. scripts/prepare-release.sh sets both lines, and a release
-# tag must equal them.
+# all carry the release version. scripts/prepare-release.sh sets these two lines and the
+# images in artifacthub.io/images below, and a release tag must equal them.
 version: 1.0.1
 appVersion: "1.0.1"
 kubeVersion: ">=1.29.0-0"
@@ -25,5 +25,49 @@ keywords:
 maintainers:
   - name: owen282000
     url: https://github.com/owen282000
+# For Artifact Hub (artifacthub.io/docs/topics/annotations/helm). scripts/prepare-release.sh
+# writes the first two from the version's changelog section. The images are listed by hand:
+# Artifact Hub would otherwise take them from a dry run with the default values, which leave
+# out the MCP server.
 annotations:
+  artifacthub.io/containsSecurityUpdates: "true"
+  artifacthub.io/changes: |
+    - kind: security
+      description: "Grafana 13.2.4, which fixes four security issues (CVE-2026-15577, CVE-2026-33374, CVE-2026-93294 and CVE-2026-95502). With Docker Compose, set `LIFEDASH_VERSION=1.0.1` (or `1`) in `.env` and run `docker compose pull && docker compose up -d`; on Kubernetes, `helm upgrade` to chart 1.0.1."
   artifacthub.io/license: MIT
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/images: |
+    - name: receiver
+      image: ghcr.io/owen282000/life-dashboard-receiver:1.0.1
+      platforms: [linux/amd64, linux/arm64]
+    - name: grafana
+      image: ghcr.io/owen282000/life-dashboard-grafana:1.0.1
+      platforms: [linux/amd64, linux/arm64]
+    - name: db
+      image: ghcr.io/owen282000/life-dashboard-db:1.0.1
+      platforms: [linux/amd64, linux/arm64]
+    - name: mcp
+      image: ghcr.io/owen282000/life-dashboard-mcp:1.0.1
+      platforms: [linux/amd64, linux/arm64]
+  artifacthub.io/links: |
+    - name: Kubernetes guide
+      url: https://github.com/owen282000/life-dashboard-stack/blob/main/docs/kubernetes.md
+    - name: Changelog
+      url: https://github.com/owen282000/life-dashboard-stack/blob/main/CHANGELOG.md
+    - name: MCP server
+      url: https://github.com/owen282000/life-dashboard-stack/blob/main/docs/mcp.md
+    - name: support
+      url: https://github.com/owen282000/life-dashboard-stack/issues
+  artifacthub.io/screenshots: |
+    - title: Overview
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/overview.png
+    - title: Activity
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/activity.png
+    - title: Sleep
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/sleep.png
+    - title: Heart and body
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/heart-body.png
+    - title: Screen time
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/screen-time.png
+    - title: Data and sync
+      url: https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/screenshots/data.png

@@ -1,5 +1,7 @@
 # life-dashboard
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard)](https://artifacthub.io/packages/search?repo=life-dashboard)
+
 The Life Dashboard Stack on Kubernetes: the receiver for the Life Dashboard Companion apps on Android and iOS, Postgres, Grafana with six dashboards of your health and screen time data, and an optional read-only MCP server and JSON API. Your data stays in your own cluster.
 
 ## Prerequisites

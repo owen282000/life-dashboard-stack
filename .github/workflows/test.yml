@@ -48,7 +48,8 @@ jobs:
           done
 
   # scripts/prepare-release.sh in a throwaway clone, then the release workflow's own check on the
-  # result: the changelog, the compose file and the chart all move to the next version together.
+  # result: the changelog, the compose file, the chart and server.json all move to the next
+  # version together.
   release-files:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,8 +76,8 @@ jobs:
           scripts/prepare-release.sh "$next"
           git diff --stat
           echo "::endgroup::"
-          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml " ] \
-            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file and Chart.yaml"; exit 1; }
+          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml server.json " ] \
+            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, Chart.yaml and server.json"; exit 1; }
           grep -q "^## \[$next\] - $(date +%Y-%m-%d)$" CHANGELOG.md
           grep -q "^\[Unreleased\]: .*/compare/$next\.\.\.HEAD$" CHANGELOG.md
           grep -q "^\[$next\]: " CHANGELOG.md
@@ -87,6 +88,10 @@ jobs:
             | grep -o 'image: "\?ghcr.io/owen282000/life-dashboard-[a-z]*:[^"]*' | sed 's/.*://' | sort -u)
           echo "chart image tags: $tags"
           [ "$tags" = "$next" ]
+          # Artifact Hub gets the version's changelog entries, and the MCP Registry the new
+          # version of the server on the new image.
+          yq -e '.annotations."artifacthub.io/changes" | from_yaml | length > 0' charts/life-dashboard/Chart.yaml
+          jq -e --arg v "$next" '.version == $v and ([.packages[].identifier] == ["ghcr.io/owen282000/life-dashboard-mcp:" + $v])' server.json
           .github/scripts/release-notes.sh "$next"
 
   pytest:

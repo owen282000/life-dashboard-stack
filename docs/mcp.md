@@ -61,6 +61,8 @@ To have every `docker compose` command include it, upgrades too, add `COMPOSE_PR
 
 With the Helm chart, `mcp.enabled: true` runs it on port 8090, with `MCP_TOKEN` in the release's Secret; see [Kubernetes](kubernetes.md#the-api-and-the-mcp-server).
 
+The server is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.owen282000/life-dashboard` (from the release after 1.0.1). A client that installs it from there runs this image over stdio, as Claude Desktop does below, and asks for the stack's Docker network (`<project>_default`) and the `dash_ro` password (`DASH_DB_PASSWORD`): it reads the stack's database, so the stack must be running.
+
 ## Claude Desktop on the same machine
 
 Claude Desktop can start the server itself and talk to it over stdio, without the HTTP port or the token. It runs a fresh container of the `mcp` service on the stack's network for each session. The stack must run on the same machine, and the image must be there: `docker compose --profile mcp pull mcp` fetches it once.
