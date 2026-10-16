@@ -12,6 +12,11 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 - A read-only JSON API under `/api/` on the receiver's port, off until `API_TOKEN` is set: `phones`, `days`, `sleep`, `workouts`, `screen-time`, `series` and `trend`, with the token as a bearer token, ranges of up to 400 days and at most 5,000 rows per answer. [docs/api.md](docs/api.md) describes every endpoint.
 - An optional MCP server, so a model you choose can read your history: a fourth image, `life-dashboard-mcp`, started with `--profile mcp` on port 8090 (`MCP_PORT`). It has six read-only tools (`list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend`, `screen_time`) on the same queries as the API, and no tool that writes or takes SQL. Streamable HTTP needs `MCP_TOKEN` as a bearer token; stdio serves Claude Desktop on the same machine. [docs/mcp.md](docs/mcp.md) has the setup, also for a local model through Ollama.
 - `dash_ro`, a database user that can only read the `dash` views, with read-only sessions and a 15-second statement timeout. The API and the MCP server read through it, never as the database owner. Its password is `DASH_DB_PASSWORD`.
+- A Helm chart for Kubernetes, `charts/life-dashboard`, for Helm 3 and 4: the receiver, Grafana with the six dashboards and the optional MCP server, with Postgres as a CloudNativePG `Cluster` (the default, with managed roles for `grafana_ro` and `dash_ro`, backups to object storage through the Barman Cloud plugin, and restores), a bundled StatefulSet, or an external database. Secrets come from an existing Secret or are generated once and kept, the pods meet the `restricted` Pod Security Standard, and Ingress, Gateway API routes, PodDisruptionBudgets and NetworkPolicies are optional. `helm test` checks the receiver, the dashboards, the data source, the API and the MCP server. [docs/kubernetes.md](docs/kubernetes.md) explains it. Each release publishes the chart to `oci://ghcr.io/owen282000/charts/life-dashboard`.
+
+### Changed
+
+- On a Postgres where the receiver's user may not create or alter roles, such as CloudNativePG's app user, the receiver uses `grafana_ro` and `dash_ro` as they exist, says so in its log, and still grants them their reads. With Docker Compose nothing changes: it creates them and sets their passwords as before.
 
 ## [1.0.0]
 

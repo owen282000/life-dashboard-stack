@@ -26,7 +26,7 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 ## The `grafana_ro` role
 
-- The name `grafana_ro`, with its password from `GRAFANA_DB_PASSWORD`.
+- The name `grafana_ro`, with its password from `GRAFANA_DB_PASSWORD`. On CloudNativePG the role and its password come from the cluster's managed roles, and the receiver grants it the same reads.
 - `SELECT` on `records`, `buckets` and every view in `dash`, `USAGE` on the `dash` and `public` schemas, and nothing else: no access to the ledger tables, read-only transactions and a 30-second statement timeout.
 - The Grafana data source **LifeDashboard Postgres** with the uid `lifedash-postgres`, which panels of your own can point at.
 
@@ -51,6 +51,23 @@ The settings in [.env.example](../.env.example) keep their names, meaning and de
 - The receiver listens on 8080 and Grafana on 3000, inside their containers and as the defaults of `RECEIVER_PORT` and `GRAFANA_PORT`. Postgres isn't published.
 - The Compose services `db`, `receiver` and `grafana`, `mcp` in the profile `mcp`, and the volumes `pgdata` (Postgres), `grafana-data` (Grafana) and `db-data` (the old Postgres 16 volume). Renaming a volume would leave your data behind, so that never happens within a major version.
 - The images `ghcr.io/owen282000/life-dashboard-receiver`, `-grafana`, `-db` and `-mcp`, tagged `1.2.3`, `1.2`, `1` and `latest`. `LIFEDASH_VERSION=1` follows every 1.x release.
+- The chart at `oci://ghcr.io/owen282000/charts/life-dashboard`, published with every release.
+
+## The Helm chart
+
+The chart `life-dashboard` has its own version, which follows semantic versioning on its own; its `appVersion` is the version of the stack it runs. Within a major version of the chart, an upgrade is `helm upgrade` with the values file you have, and these keep their names, meaning and defaults:
+
+- `image.registry`, `image.tag`, `image.pullPolicy`, `imagePullSecrets`, and `repository`, `tag` and `digest` under each component's `image`.
+- `timezone`, and everything under `secrets`: `existingSecret` with its keys (`WEBHOOK_SECRET`, `GRAFANA_PASSWORD`, `GRAFANA_DB_PASSWORD`, `DASH_DB_PASSWORD`, `API_TOKEN`, `MCP_TOKEN`, `POSTGRES_PASSWORD`, `PAIRING_TOKEN`), the values that replace generated ones, and `keepOnUninstall`. A generated secret stays the same on every upgrade.
+- `receiver.publicUrl`, `receiver.pairing.log` and `.page`, `receiver.api.enabled`, `receiver.expose.webhook`, `.api` and `.pair` (only `/webhook` by default), `receiver.replicas`, and `mcp.enabled`.
+- `postgres.mode` (`cnpg`, `bundled`, `external`), `postgres.database` and `postgres.owner`, and under `postgres.cnpg`: `clusterName`, `instances`, `imageName`, `storage`, `walStorage`, `parameters`, `keepOnUninstall`, `roles`, `backup` and `recovery`; under `postgres.bundled`: `image` and `storage`; under `postgres.external`: `existingSecret`, `urlKey`, `host`, `port`, `database` and `sslmode`.
+- `grafana.adminUser`, `grafana.rootUrl` and `grafana.persistence`.
+- For every component: `service`, `ingress`, `httpRoute`, `resources`, `podSecurityContext`, `securityContext`, `podAnnotations`, `podLabels`, `nodeSelector`, `tolerations`, `affinity`, `extraEnv` and `podDisruptionBudget` where it has one.
+- `demo`, and `networkPolicy` with its `from`, `externalDatabase` and `grafanaEgress` peers.
+- The names of what the chart creates, which data and other tools point at: `<release>-life-dashboard` and its `-receiver`, `-grafana`, `-mcp` and `-postgres` suffixes, the role Secrets `-grafana-ro` and `-dash-ro`, and the CloudNativePG `Cluster` `<release>-life-dashboard-postgres`. Renaming one would leave data or a password behind, so that never happens within a major version.
+- An uninstall keeps the database, Grafana's volume and the generated Secrets unless you switch that off.
+
+Values may be added, with a default that keeps the chart doing what it did. A new chart version may raise the stack's version and the versions of CloudNativePG's Postgres 18 image.
 
 ## What can change in a minor version
 

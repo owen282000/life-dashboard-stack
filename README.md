@@ -70,6 +70,7 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 - [Write your own query](#write-your-own-query)
 - [Read your data back](#read-your-data-back)
 - [Ask your own AI (MCP)](#ask-your-own-ai-mcp)
+- [Kubernetes](#kubernetes)
 - [Build from source](#build-from-source)
 - [Known gaps](#known-gaps)
 
@@ -336,6 +337,20 @@ docker compose --profile mcp up -d
 It serves Streamable HTTP at `http://<address of this machine>:8090/mcp` with the token as a bearer token, for Open WebUI, LM Studio or any MCP client, and stdio for Claude Desktop on the same machine. [docs/mcp.md](docs/mcp.md) has the setup for each, including a local model through Ollama.
 
 The stack sends nothing to any AI by itself. With a local model everything stays on your hardware. With a cloud model, Claude Desktop included, your questions and every result the model asks for go to that provider.
+
+## Kubernetes
+
+For a Kubernetes cluster of your own there's a Helm chart, `charts/life-dashboard`, with the same four images. It runs Postgres through [CloudNativePG](https://cloudnative-pg.io), with replicas, failover and backups to object storage, or as one bundled pod, or uses a Postgres you already have. Secrets are generated once and kept, the pods meet the `restricted` Pod Security Standard, and the receiver can get an Ingress or a Gateway API route that opens only `/webhook`:
+
+```bash
+kubectl apply --server-side -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.30.1/cnpg-1.30.1.yaml
+helm install lifedash charts/life-dashboard -n life-dashboard --create-namespace \
+  --set timezone=Europe/Amsterdam --set receiver.publicUrl=https://lifedash.example.com --wait --timeout 10m
+helm test lifedash -n life-dashboard --logs
+```
+
+[docs/kubernetes.md](docs/kubernetes.md) covers the three Postgres modes, secrets, pairing, routes and TLS, backups and restores, upgrades, what an uninstall keeps, and Argo CD and Flux.
+
 ## Build from source
 
 To change the receiver, the views or the dashboards, clone the repository and let Compose build the images from it:
