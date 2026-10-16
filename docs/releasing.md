@@ -1,6 +1,6 @@
 # Releasing
 
-For the maintainer: how a version is tagged and published. Building and testing the stack is in the [README](../README.md#build-from-source); what a version keeps stable is in [compatibility.md](compatibility.md).
+For the maintainer: how a version is tagged and published. Building and testing the stack is in [operations.md](operations.md#build-from-source); what a version keeps stable is in [compatibility.md](compatibility.md).
 
 ## Version tags
 
@@ -40,7 +40,7 @@ The first time an image or the chart is published, GHCR makes its package privat
 
 Dependabot updates the GitHub Actions, the Dockerfiles' base images and the Python packages. These versions it can't see, so check them before each release and keep the copies equal:
 
-- **CloudNativePG operator** (`1.30.1`): `CNPG_VERSION` in [test.yml](../.github/workflows/test.yml), [kubernetes.md](kubernetes.md) and the [README](../README.md).
+- **CloudNativePG operator** (`1.30.1`): `CNPG_VERSION` in [test.yml](../.github/workflows/test.yml), and in [kubernetes.md](kubernetes.md) twice: the install command and Tested on.
 - **Barman Cloud plugin** (`v0.15.1`) and **cert-manager** (`v1.21.2`): [kubernetes.md](kubernetes.md).
 - **CloudNativePG Postgres image** (`18.6-standard-trixie`): `postgres.cnpg.imageName` in [values.yaml](../charts/life-dashboard/values.yaml) and [kubernetes.md](kubernetes.md). Keep it on the same Postgres minor as [db/Dockerfile](../db/Dockerfile).
 - **Tools in the workflows**: Helm 4 and Helm 3 (`env` in test.yml and `HELM_VERSION` in [release.yml](../.github/workflows/release.yml)), chart-testing, kind, the `kindest/node` image, Calico, and the kubeconform, actionlint and shellcheck images, all in the `env` of test.yml.

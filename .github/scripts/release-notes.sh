@@ -23,7 +23,7 @@ cat <<EOF
 
 ### Install $V
 
-- **Docker Compose:** \`docker-compose.yml\` and \`env.example\` below run this version; see the [README]($REPO/blob/$V/README.md).
+- **Docker Compose:** \`docker-compose.yml\` and \`env.example\` below run this version; see the [setup guide]($REPO/blob/$V/docs/install.md).
 - **Images**, for amd64 and arm64: \`ghcr.io/owen282000/life-dashboard-receiver:$V\`, \`life-dashboard-grafana:$V\`, \`life-dashboard-db:$V\` and \`life-dashboard-mcp:$V\`.
 - **Helm chart** $V, which runs these images: \`helm install lifedash oci://ghcr.io/owen282000/charts/life-dashboard --version $V\`; see [docs/kubernetes.md]($REPO/blob/$V/docs/kubernetes.md).
 EOF

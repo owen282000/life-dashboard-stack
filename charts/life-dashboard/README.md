@@ -60,7 +60,7 @@ Or set `receiver.pairing.page: true` while you pair, and open `/pair` through `k
 
 ## Security
 
-Every pod runs as a non-root user with a read-only root file system, no capabilities, `RuntimeDefault` seccomp and no service account token, so the chart installs under the `restricted` Pod Security level. Grafana and the MCP server read through read-only database roles, never as the owner. The Ingress and HTTPRoute send only `/webhook` to the receiver unless you open more.
+Every pod runs as a non-root user with a read-only root file system, no capabilities, `RuntimeDefault` seccomp, so the chart installs under the `restricted` Pod Security level. The chart's own pods get no service account token; only CloudNativePG's instance pods talk to the Kubernetes API. Grafana and the MCP server read through read-only database roles, never as the owner. The Ingress and HTTPRoute send only `/webhook` to the receiver unless you open more.
 
 ## Upgrade and uninstall
 

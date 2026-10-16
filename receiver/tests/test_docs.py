@@ -49,7 +49,8 @@ def test_no_long_dashes_in_shipped_text():
                  REPO_DIR / "docs" / "api.md", REPO_DIR / "docs" / "mcp.md",
                  *(REPO_DIR / "mcp").rglob("*.py"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql"),
-                 REPO_DIR / "docs" / "kubernetes.md",
+                 REPO_DIR / "docs" / "kubernetes.md", REPO_DIR / "docs" / "install.md",
+                 REPO_DIR / "docs" / "operations.md",
                  *(p for p in (REPO_DIR / "charts").rglob("*") if p.is_file())]:
         text = path.read_text()
         assert "\u2013" not in text and "\u2014" not in text, path

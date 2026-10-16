@@ -32,7 +32,7 @@ The stack also comes as a Helm chart, `life-dashboard`, for a Kubernetes cluster
 | MCP server | Deployment and Service, with `mcp.enabled` | 8090 | Off by default, like the `mcp` profile. |
 | Postgres | CloudNativePG `Cluster`, a StatefulSet, or none | 5432 | See [the three modes](#postgres-three-modes). |
 
-Every pod runs as a non-root user with a read-only root file system, all capabilities dropped and the `RuntimeDefault` seccomp profile, so the chart installs in a namespace with the `restricted` Pod Security level. No pod gets a service account token: none of them talks to the Kubernetes API.
+Every pod runs as a non-root user with a read-only root file system, all capabilities dropped and the `RuntimeDefault` seccomp profile, so the chart installs in a namespace with the `restricted` Pod Security level. The chart's own pods (the receiver, Grafana, the MCP server, the bundled Postgres and the demo and test pods) get no service account token: none of them talks to the Kubernetes API. CloudNativePG's instance pods do, with a service account the operator creates for them.
 
 ## Install CloudNativePG
 
@@ -250,7 +250,7 @@ Set `receiver.publicUrl` to the address your phone reaches the receiver on, such
 kubectl -n life-dashboard exec deploy/lifedash-life-dashboard-receiver -- python pairing.py phone
 ```
 
-`phone` is the label: give each phone its own, 1 to 32 lowercase letters, digits, `-` and `_`. It prints the same block as the log would, with the QR code, the URL and the secret to type by hand. Scan it with the app, as in the [README](../README.md#pair-the-app). Without `receiver.publicUrl` it says what to set.
+`phone` is the label: give each phone its own, 1 to 32 lowercase letters, digits, `-` and `_`. It prints the same block as the log would, with the QR code, the URL and the secret to type by hand. Scan it with the app, as in [the setup guide](install.md#pair-the-app). Without `receiver.publicUrl` it says what to set.
 
 If you'd rather scan from a browser, switch the page on while you pair, with `receiver.pairing.page: true`, and open it through a port-forward from your own computer:
 
@@ -299,7 +299,7 @@ receiver:
 ```
 
 - Allow request bodies of 32 MB: a backfill sends large payloads, and the receiver turns away anything larger with a 413. ingress-nginx needs the annotation above; Traefik has no limit by default.
-- `grafana.ingress` and `grafana.httpRoute` route all of Grafana. Keep Grafana on your own network or behind a VPN or an authenticating proxy, as the [README](../README.md#exposing-it-safely) says, and set `grafana.rootUrl` to its address.
+- `grafana.ingress` and `grafana.httpRoute` route all of Grafana. Keep Grafana on your own network or behind a VPN or an authenticating proxy, as [Exposing it safely](operations.md#exposing-it-safely) says, and set `grafana.rootUrl` to its address.
 - `receiver.service.type: LoadBalancer` works for a LAN address from MetalLB or similar, but it exposes every path, `/pair` too while the page is on; see [Pair a phone](#pair-a-phone).
 
 ## The API and the MCP server
@@ -486,7 +486,7 @@ Two things to know about how they work:
 - Grafana's image puts its user in group 0 as well. From Kubernetes 1.33 on, the chart sets `supplementalGroupsPolicy: Strict` on Grafana's pod, so it runs with the groups the chart sets and nothing the image adds. A container runtime that doesn't support that yet refuses the pod; set `grafana.podSecurityContext.supplementalGroupsPolicy: Merge` there.
 - No service account token is mounted, and the service account has no role.
 - Requests and memory limits are set for every pod, with no CPU limits, so a backfill isn't throttled.
-- Grafana's data source reads as `grafana_ro`, and the API and the MCP server as `dash_ro`, never as the owner. Each pod gets only the secrets it uses, see [Secrets](#secrets). The rest of [Exposing it safely](../README.md#exposing-it-safely) holds as well.
+- Grafana's data source reads as `grafana_ro`, and the API and the MCP server as `dash_ro`, never as the owner. Each pod gets only the secrets it uses, see [Secrets](#secrets). The rest of [Exposing it safely](operations.md#exposing-it-safely) holds as well.
 - The pairing block and the `/pair` page, which show the webhook secret, are off; see [Pair a phone](#pair-a-phone).
 - The secrets reach the pods as environment variables. Anyone who may `kubectl exec` into a pod in the namespace can read them, so keep that right to yourself. Grafana can read a setting from a file instead (the `__FILE` variants of its settings); the receiver and the MCP server can't yet.
 

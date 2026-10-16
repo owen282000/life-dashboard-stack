@@ -1,6 +1,6 @@
 # What a version keeps stable
 
-The stack has version numbers from 1.0.0 on, in the form `major.minor.patch`. Within one major version, so for all of 1.x, an upgrade is `docker compose pull && docker compose up -d`, or `helm upgrade` on Kubernetes, and nothing you built on top of the stack breaks: the phones keep sending, your own queries and panels keep working, and your `.env` or values file stays valid. A change to anything on this page is a new major version, with the steps for it in [CHANGELOG.md](../CHANGELOG.md) and the README.
+The stack has version numbers from 1.0.0 on, in the form `major.minor.patch`. Within one major version, so for all of 1.x, an upgrade is `docker compose pull && docker compose up -d`, or `helm upgrade` on Kubernetes, and nothing you built on top of the stack breaks: the phones keep sending, your own queries and panels keep working, and your `.env` or values file stays valid. A change to anything on this page is a new major version, with the steps for it in [CHANGELOG.md](../CHANGELOG.md) and [operations.md](operations.md#upgrading).
 
 A minor version adds things: a view, a column, a dashboard, a setting with a default. A patch version fixes things.
 

@@ -19,7 +19,7 @@ The dashboards read nothing but the views in the `dash` schema. You can query th
 
 ## How it fits together
 
-The receiver stores every record of every payload in one table, `records`, with the record's JSON in `data`. On every start it drops the `dash` schema and builds it again from `receiver/views.sql`, which is part of the receiver image. A change to that file takes effect once you [build from source](../README.md#build-from-source) and start the stack again. That also means anything you create in `dash` is gone after a restart. Put views of your own in the `public` schema, and have them read `records`: a view in `public` that reads a `dash` view is dropped with it on the next start.
+The receiver stores every record of every payload in one table, `records`, with the record's JSON in `data`. On every start it drops the `dash` schema and builds it again from `receiver/views.sql`, which is part of the receiver image. A change to that file takes effect once you [build from source](operations.md#build-from-source) and start the stack again. That also means anything you create in `dash` is gone after a restart. Put views of your own in the `public` schema, and have them read `records`: a view in `public` that reads a `dash` view is dropped with it on the next start.
 
 Grafana connects as `grafana_ro`, a database user that can read the `dash` views, `records` and `buckets` and nothing else. Its password is `GRAFANA_DB_PASSWORD` from `.env`.
 
