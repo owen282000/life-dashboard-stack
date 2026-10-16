@@ -59,6 +59,8 @@ It serves MCP over Streamable HTTP at `http://<address of this machine>:8090/mcp
 
 To have every `docker compose` command include it, upgrades too, add `COMPOSE_PROFILES=mcp` to `.env`; otherwise keep `--profile mcp` on later commands, such as `docker compose --profile mcp pull` and `docker compose --profile mcp up -d` after you change `LIFEDASH_VERSION`, or the server keeps running the old version. From a clone, `docker-compose.build.yml` builds it as `life-dashboard-mcp:local`.
 
+With the Helm chart, `mcp.enabled: true` runs it on port 8090, with `MCP_TOKEN` in the release's Secret; see [Kubernetes](kubernetes.md#the-api-and-the-mcp-server).
+
 ## Claude Desktop on the same machine
 
 Claude Desktop can start the server itself and talk to it over stdio, without the HTTP port or the token. It runs a fresh container of the `mcp` service on the stack's network for each session. The stack must run on the same machine, and the image must be there: `docker compose --profile mcp pull mcp` fetches it once.
