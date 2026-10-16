@@ -95,24 +95,20 @@ The data can also go to an MQTT broker or a webhook of your own instead. Both ap
 
 ## Quick start
 
-You need Docker with Compose, and a phone that can reach this machine (the same network, or a VPN).
+You need Docker with Compose, or Podman, and a phone that can reach this machine (the same network, or a VPN).
 
 <a id="pair-the-app"></a>
 
-1. Download the compose file and the example settings from the latest release:
+1. Run the installer. It puts the release files in `./life-dashboard`, writes `.env` with a random secret and passwords, starts the stack and shows the pairing code:
 
    ```bash
-   mkdir life-dashboard && cd life-dashboard
-   curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
-   curl -fsSL -o .env https://github.com/owen282000/life-dashboard-stack/releases/latest/download/env.example
+   curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh
    ```
 
-2. In `.env`, set `WEBHOOK_SECRET` (`openssl rand -hex 32`), your time zone in `TZ`, the passwords `GRAFANA_PASSWORD` and `GRAFANA_DB_PASSWORD`, and in `PUBLIC_URL` the address your phone reaches this machine on. Then run `docker compose up -d`.
-3. Show the pairing code with `docker compose logs receiver`, or open `http://<address of this machine>:8080/pair` on your own network.
-4. In the app, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
-5. Open Grafana on port 3000 and log in as `admin` with your `GRAFANA_PASSWORD`. The overview is the home page.
+2. In the app, open the **Webhook** card on the **Health** tab, tap **Scan a pairing code** and scan the code in your terminal. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
+3. Open Grafana on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
 
-The [setup guide](docs/install.md) explains every setting, the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand), [several phones](docs/install.md#several-phones) and how to check that data arrives.
+Something wrong? The same line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).
 
 ## Try it without a phone
 

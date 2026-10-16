@@ -5,13 +5,13 @@ name: release
 # It packages the Helm chart in charts/life-dashboard and pushes it to
 # oci://ghcr.io/owen282000/charts/life-dashboard as version 1.2.3, with an attestation, and
 # charts/artifacthub-repo.yml to its tag artifacthub.io for Artifact Hub. Then
-# it creates the GitHub release with docker-compose.yml and env.example attached and the
-# version's section of CHANGELOG.md as the notes, followed by where to get the images and the
+# it creates the GitHub release with docker-compose.yml, env.example and install.sh attached and
+# the version's section of CHANGELOG.md as the notes, followed by where to get the images and the
 # chart. With the MCP image on GHCR, it publishes server.json, the MCP server's entry, to the
 # official MCP Registry (registry.modelcontextprotocol.io) as io.github.owen282000/life-dashboard.
 # Everything carries the one version of the tag: scripts/prepare-release.sh points the compose
-# file, the chart's version, appVersion and images, and server.json at it, and the check job
-# refuses a tag that does not match them.
+# file, install.sh, the chart's version, appVersion and images, server.json and mcp/server.py at
+# it, and the check job refuses a tag that does not match them.
 
 on:
   push:
@@ -232,11 +232,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # GitHub renames release assets that start with a dot, so .env.example goes up as
       # env.example.
-      - name: Create the release with docker-compose.yml and env.example
+      # install.sh fetches the other two of its own version, so the one-line install through
+      # releases/latest/download/install.sh always gets three files of one release.
+      - name: Create the release with docker-compose.yml, env.example and install.sh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           .github/scripts/release-notes.sh "$TAG" > notes.md
           cp .env.example env.example
-          gh release create "$TAG" docker-compose.yml env.example \
+          gh release create "$TAG" docker-compose.yml env.example install.sh \
             --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md

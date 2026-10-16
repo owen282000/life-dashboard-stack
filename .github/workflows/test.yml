@@ -25,6 +25,8 @@ env:
   KUBECONFORM_IMAGE: ghcr.io/yannh/kubeconform:v0.8.0@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e
   ACTIONLINT_IMAGE: rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
   SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+  ALPINE_IMAGE: alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+  PODMAN_COMPOSE_VERSION: 1.6.0
 
 jobs:
   # The workflows, the shell scripts and every way to read the compose files.
@@ -36,7 +38,10 @@ jobs:
       - name: actionlint, with shellcheck on the run steps
         run: docker run --rm -v "$PWD:/repo" -w /repo "$ACTIONLINT_IMAGE" -color
       - name: shellcheck on the scripts and the pre-push hook
-        run: docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tools/*.sh .github/scripts/*.sh .githooks/pre-push
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tools/*.sh .github/scripts/*.sh .githooks/pre-push install.sh
+          # install.sh promises plain POSIX sh, so dash's rules too.
+          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" --shell=dash install.sh
       - name: docker compose config, with and without the build override and the profiles
         run: |
           for files in "-f docker-compose.yml" "-f docker-compose.yml -f docker-compose.build.yml"; do
@@ -48,8 +53,8 @@ jobs:
           done
 
   # scripts/prepare-release.sh in a throwaway clone, then the release workflow's own check on the
-  # result: the changelog, the compose file, the chart and server.json all move to the next
-  # version together.
+  # result: the changelog, the compose file, install.sh, the chart, server.json and the MCP
+  # server's version all move to the next version together.
   release-files:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -76,8 +81,9 @@ jobs:
           scripts/prepare-release.sh "$next"
           git diff --stat
           echo "::endgroup::"
-          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml mcp/server.py server.json " ] \
-            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, Chart.yaml, mcp/server.py and server.json"; exit 1; }
+          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml install.sh mcp/server.py server.json " ] \
+            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, install.sh, Chart.yaml, mcp/server.py and server.json"; exit 1; }
+          grep -qx "VERSION=$next" install.sh
           grep -q "^## \[$next\] - $(date +%Y-%m-%d)$" CHANGELOG.md
           grep -q "^\[Unreleased\]: .*/compare/$next\.\.\.HEAD$" CHANGELOG.md
           grep -q "^\[$next\]: " CHANGELOG.md
@@ -178,6 +184,105 @@ jobs:
         run: docker compose logs
       - if: always()
         run: docker compose down -v
+
+  # install.sh the way a new user runs it, without a terminal, against the images built from this
+  # commit: with Docker, and with rootless Podman and podman-compose. Then the doctor must pass on
+  # the essentials, a second run and --upgrade must keep .env, and a stopped receiver must make the
+  # doctor fail. --env-only runs in a container that has no container engine at all.
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    env:
+      LIFEDASH_ENGINE: ${{ matrix.engine }}
+      LIFEDASH_VERSION: ci
+      # podman compose would pick the runner's Docker Compose plugin first; test podman-compose.
+      PODMAN_COMPOSE_PROVIDER: podman-compose
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the images
+        run: |
+          for image in receiver grafana db mcp; do
+            docker build -q -f "$image/Dockerfile" -t "ghcr.io/owen282000/life-dashboard-$image:ci" .
+          done
+      - if: matrix.engine == 'podman'
+        name: Rootless Podman with podman-compose, a systemd user session for the healthchecks, and the images
+        run: |
+          podman --version
+          pipx install "podman-compose==$PODMAN_COMPOSE_VERSION"
+          podman-compose version
+          sudo loginctl enable-linger "$USER"
+          uid=$(id -u)
+          for _ in $(seq 1 30); do [ -S "/run/user/$uid/bus" ] && break; sleep 1; done
+          echo "XDG_RUNTIME_DIR=/run/user/$uid" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus" >> "$GITHUB_ENV"
+          for image in receiver grafana db mcp; do
+            docker save "ghcr.io/owen282000/life-dashboard-$image:ci" | podman load -q
+          done
+      - name: install.sh, without a terminal
+        run: timeout 900 sh install.sh --no-pull --with-api --with-mcp --dir "$RUNNER_TEMP/lifedash"
+      - name: The doctor passes on the essentials
+        run: |
+          # Podman runs healthchecks from a timer and its DNS can lag right after a start, so the
+          # stack gets up to two minutes to settle before the doctor's verdict counts.
+          for _ in 1 2 3 4 5 6 7 8; do
+            sh install.sh doctor --dir "$RUNNER_TEMP/lifedash" > doctor.txt || true
+            if grep -q '^PASS  container mcp:' doctor.txt && ! grep -q '^FAIL' doctor.txt; then break; fi
+            sleep 15
+          done
+          cat doctor.txt
+          for check in "container db" "container receiver" "container grafana" "container mcp" "receiver port" \
+                       "receiver from this machine" "Grafana" "Grafana login" "MCP server" WEBHOOK_SECRET PUBLIC_URL \
+                       database migrations grafana_ro dash_ro "receiver /health" API; do
+            grep -q "^PASS  $check:" doctor.txt || { echo "::error::doctor: $check did not pass"; exit 1; }
+          done
+          if grep -q '^FAIL' doctor.txt; then exit 1; fi
+      - name: A second run and --upgrade keep .env
+        run: |
+          env_file="$RUNNER_TEMP/lifedash/.env"
+          before=$(sha256sum "$env_file")
+          sh install.sh --no-pull --dir "$RUNNER_TEMP/lifedash"
+          sh install.sh --no-pull --upgrade --dir "$RUNNER_TEMP/lifedash"
+          [ "$(sha256sum "$env_file")" = "$before" ]
+          [ "$(stat -c %a "$env_file")" = 600 ]
+      - name: A stopped receiver makes the doctor fail
+        run: |
+          "$LIFEDASH_ENGINE" stop "$("$LIFEDASH_ENGINE" ps -q --filter label=com.docker.compose.service=receiver)"
+          if sh install.sh doctor --dir "$RUNNER_TEMP/lifedash" > doctor.txt; then
+            cat doctor.txt
+            echo "::error::the doctor passed with the receiver stopped"
+            exit 1
+          fi
+          grep '^FAIL  container receiver:' doctor.txt
+      - if: matrix.engine == 'docker'
+        name: --env-only without a container engine, from a clone and through a pipe
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" "$ALPINE_IMAGE" sh -c '
+            set -e
+            if command -v docker || command -v podman; then echo "::error::the --env-only check needs a container without an engine"; exit 1; fi
+            sh /repo/install.sh --env-only --with-api --with-mcp --public-url http://192.168.1.10:8080 --tz Europe/Amsterdam > /tmp/env
+            grep -Eq "^WEBHOOK_SECRET=[0-9a-f]{64}$" /tmp/env
+            grep -Eq "^GRAFANA_PASSWORD=[0-9a-f]{32}$" /tmp/env
+            grep -Eq "^API_TOKEN=[0-9a-f]{64}$" /tmp/env
+            grep -Eq "^MCP_TOKEN=[0-9a-f]{64}$" /tmp/env
+            [ "$(sed -n "s/^API_TOKEN=//p" /tmp/env)" != "$(sed -n "s/^MCP_TOKEN=//p" /tmp/env)" ]
+            grep -qx "PUBLIC_URL=http://192.168.1.10:8080" /tmp/env
+            grep -qx "COMPOSE_PROFILES=mcp" /tmp/env'
+          # Through a pipe there is no clone, so it fetches env.example; here from a local folder.
+          mkdir release && cp docker-compose.yml release/ && cp .env.example release/env.example
+          LIFEDASH_DOWNLOAD="file://$PWD/release" sh -s -- --env-only --output "$RUNNER_TEMP/env" < install.sh 2> notes.txt
+          grep -q '^# CHANGE ME: PUBLIC_URL' "$RUNNER_TEMP/env"
+          grep -qx 'PUBLIC_URL=' "$RUNNER_TEMP/env"
+          grep -q "release/docker-compose.yml" notes.txt
+          [ "$(stat -c %a "$RUNNER_TEMP/env")" = 600 ]
+          if sh install.sh --env-only --output "$RUNNER_TEMP/env" 2>/dev/null; then echo "::error::--output overwrote a file"; exit 1; fi
+      - if: failure()
+        run: cd "$RUNNER_TEMP/lifedash" && "$LIFEDASH_ENGINE" compose --profile mcp logs --tail 100
+      - if: always()
+        run: cd "$RUNNER_TEMP/lifedash" 2>/dev/null && "$LIFEDASH_ENGINE" compose --profile mcp down -v || true
 
   # The Helm chart with Helm 4 and Helm 3: lint and render every value file in ci/, validate
   # the result against the Kubernetes schemas and those of the CloudNativePG, Barman Cloud and

@@ -10,6 +10,7 @@ The stack also comes as a Helm chart, `life-dashboard`, for a Kubernetes cluster
 - [Postgres: three modes](#postgres-three-modes)
 - [Secrets](#secrets)
 - [Pair a phone](#pair-a-phone)
+- [Check the install](#check-the-install)
 - [Reach it from outside](#reach-it-from-outside)
 - [The API and the MCP server](#the-api-and-the-mcp-server)
 - [Backups](#backups)
@@ -261,6 +262,16 @@ kubectl -n life-dashboard port-forward svc/lifedash-life-dashboard-receiver 8080
 Then open `http://localhost:8080/pair`. A port-forward arrives at the receiver from its own loopback address, so the page answers. Switch it off again afterwards: `/pair` answers every request from a private address that carries no proxy header, with or without a pairing token, and inside a cluster that's every pod, and also a request that a `LoadBalancer` or `NodePort` Service passes on with `externalTrafficPolicy: Cluster`, from wherever it came.
 
 Through an Ingress or a Gateway, which add `X-Forwarded-For`, `/pair` answers only with `?token=` and `secrets.pairingToken`. `receiver.expose.pair` routes it there, and the chart refuses to render it without `receiver.pairing.page: true` and a pairing token (`secrets.pairingToken`, or `PAIRING_TOKEN` in your own Secret). Prefer the port-forward: the receiver hides the token in its own log, but the ingress controller's access log, any proxy in between and your browser history keep the URL with `?token=` in it.
+
+## Check the install
+
+`helm test` checks that the parts answer. To see what's wrong when something is, run the doctor in the receiver:
+
+```bash
+kubectl -n life-dashboard exec deploy/lifedash-life-dashboard-receiver -- python doctor.py
+```
+
+It prints a `PASS`, `WARN` or `FAIL` line per check, with the fix: the webhook secret, `receiver.publicUrl`, the time zone, the database and its migrations, `grafana_ro` and `dash_ro`, the API when it's on, and when each phone last sent data. On CloudNativePG, where the operator owns the roles' passwords, it checks that the roles exist and may read. It never prints a secret. [Troubleshooting](operations.md#troubleshooting) lists every check; the pods' own state is `kubectl -n life-dashboard get pods`.
 
 ## Reach it from outside
 

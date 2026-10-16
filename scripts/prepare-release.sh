@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 # Prepares a release for tagging: moves the Unreleased section of CHANGELOG.md under the new
-# version, points the image defaults in docker-compose.yml, the Helm chart's version, appVersion
-# and image list, and the version and image of the MCP server in server.json at it, gives the
-# chart that section's entries as its Artifact Hub changelog, and updates the version links at
-# the bottom of the changelog. The release workflow checks all of these against the tag it
-# builds.
+# version, points the image defaults in docker-compose.yml, the version in install.sh, the Helm
+# chart's version, appVersion and image list, the version and image of the MCP server in
+# server.json and the version mcp/server.py reports at it, gives the chart that section's
+# entries as its Artifact Hub changelog, and updates the version links at the bottom of the
+# changelog. The release workflow checks all of these against the tag it builds.
 #
 # Usage: scripts/prepare-release.sh 1.1.0
 #
@@ -42,6 +42,9 @@ PY
 # Every image default in docker-compose.yml follows the version.
 # shellcheck disable=SC2016 # the ${...} is literal compose syntax, not a shell expansion
 sed -E -i.bak 's/\$\{LIFEDASH_VERSION:-[0-9]+\.[0-9]+\.[0-9]+\}/${LIFEDASH_VERSION:-'"$V"'}/g' docker-compose.yml && rm docker-compose.yml.bak
+
+# install.sh fetches the release files of the version it carries.
+sed -E -i.bak 's/^VERSION=[0-9]+\.[0-9]+\.[0-9]+$/VERSION='"$V"'/' install.sh && rm install.sh.bak
 
 CHART=charts/life-dashboard/Chart.yaml
 if [ -f "$CHART" ]; then

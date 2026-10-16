@@ -1,11 +1,12 @@
 # Running the stack
 
-How to keep a Docker Compose install up to date, back it up and reach it safely, how to build it from source, and what it doesn't do yet. Installing it is in [install.md](install.md); on Kubernetes, [kubernetes.md](kubernetes.md) covers the same ground for the Helm chart.
+How to keep a Docker Compose install up to date, find what's wrong with it, back it up and reach it safely, how to build it from source, and what it doesn't do yet. Installing it is in [install.md](install.md); on Kubernetes, [kubernetes.md](kubernetes.md) covers the same ground for the Helm chart.
 
 ## Contents
 
 - [Upgrading](#upgrading)
 - [Upgrading from a version before 1.0.0](#upgrading-from-a-version-before-100)
+- [Troubleshooting](#troubleshooting)
 - [Backups](#backups)
 - [Exposing it safely](#exposing-it-safely)
 - [Build from source](#build-from-source)
@@ -17,6 +18,12 @@ The `docker-compose.yml` of a release starts the images of that release. To move
 
 ```bash
 docker compose pull && docker compose up -d
+```
+
+Installed with the [one-line installer](install.md#with-one-line)? Run the line of the new release with `--upgrade` in the install folder instead: it fetches that release's `docker-compose.yml`, keeps `.env`, pulls and restarts.
+
+```bash
+curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh -s -- --upgrade
 ```
 
 To follow every 1.x release, set `LIFEDASH_VERSION=1` once; from then on those two commands are the whole upgrade. A 1.x release never breaks what you built on the stack, see [compatibility.md](compatibility.md), and the [changelog](../CHANGELOG.md) says what's new. When a release adds something to `docker-compose.yml` itself, its notes say so; download that file again then, and keep your `.env`. If you run the MCP server, keep `--profile mcp` on both commands, or set `COMPOSE_PROFILES=mcp` in `.env`, as [mcp.md](mcp.md#start-the-server) explains.
@@ -55,6 +62,47 @@ docker compose up -d --build
 
 Once you're happy with the new version, stop the stack with `docker compose down` (without `-v`) and remove the old volume with `docker volume rm life-dashboard-stack_db-data`. The next start creates an empty one in its place, and the guard lets an empty volume through. To start with an empty database instead and leave the old volume as it is, set `IGNORE_OLD_VOLUME=1` in `.env`.
 
+## Troubleshooting
+
+The doctor checks a running stack and prints one line per check, `PASS`, `WARN`, `FAIL` or `INFO`, with the fix under every warning and failure. In the install folder:
+
+```bash
+curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh -s -- doctor
+```
+
+From a clone, `sh install.sh doctor`; elsewhere, add `--dir <install folder>`. It works with Docker and with Podman, and exits with 1 when a check failed. It changes nothing and never prints a secret or a password.
+
+On the machine, it checks:
+
+- the engine and Compose, and that `docker-compose.yml` and `.env` read fine, with the version of the images;
+- that `.env` isn't readable by every user;
+- each container (`db`, `receiver`, `grafana`, and `mcp` when it's on): running, and healthy;
+- the ports: the receiver published on every interface (on `127.0.0.1` only, a phone can't reach it), and Grafana's;
+- the receiver's `/health` from this machine, and `PUBLIC_URL/health` from this machine;
+- Grafana's health, and whether `GRAFANA_PASSWORD` from `.env` still logs in `admin` (Grafana reads it only on its first start, so after a change in Grafana itself this is a warning, not a failure);
+- with the MCP server on: its token (at least 16 characters, not the same as `API_TOKEN`), `/health`, and that `/mcp` answers with the token and refuses without it;
+- how full the database's volume is;
+- with rootless Podman: whether the containers come back after a reboot.
+
+Then it runs `python doctor.py` in the receiver's container, which checks from the inside:
+
+- `WEBHOOK_SECRET` set and usable in a pairing code, `PUBLIC_URL` set, valid, and not `localhost` or `127.0.0.1`, which a phone can't reach, `TZ` set and known to Postgres, and `PAIRING_TOKEN` long enough when set;
+- the database: the connection, every migration applied, the `dash` views there, and its size;
+- `grafana_ro` and `dash_ro`: each logs in with its password and reads a view, in read-only sessions. Where the roles are managed elsewhere, as on CloudNativePG, it checks that they exist and may read;
+- every phone label with the time of its last data and its last ping, as a warning when it sent nothing for 24 hours (`--quiet-hours` changes that) and when only test pings arrived;
+- the receiver's `/health` on its own port, `PUBLIC_URL/health` from inside the container, and with `API_TOKEN` set, that `/api/phones` answers with the token and refuses without it.
+
+A warning for `PUBLIC_URL` from inside the container alone is often fine: many routers and rootless Podman don't let a container reach its own host's address (no hairpin NAT). Whether the phone reaches the receiver is the one thing no check on the server can tell. Test it on the phone itself, on the network it syncs from: open `PUBLIC_URL/health`, such as `http://192.168.1.10:8080/health`, in its browser. `{"status": "ok"}` means the phone gets there; the app's **Test ping** in the **Webhook** card tests the same, with the secret. If the browser can't open it, check the address, the phone's Wi-Fi or VPN, and the machine's firewall (ufw or firewalld on Linux, the firewall in System Settings on macOS).
+
+`doctor.py` is in the receiver image from 1.1.0 on, so it also runs on its own, with Docker Compose or on [Kubernetes](kubernetes.md):
+
+```bash
+docker compose exec receiver python doctor.py
+kubectl -n life-dashboard exec deploy/lifedash-life-dashboard-receiver -- python doctor.py
+```
+
+`--mcp-url http://<mcp service>:8090` adds the MCP server's `/health` and its refusal without a token, `--json` prints the results as JSON.
+
 ## Backups
 
 A year of health data deserves a copy somewhere else. One line writes a dump:
@@ -74,7 +122,7 @@ Restart the receiver afterward (`docker compose restart receiver`) so it rebuild
 ## Exposing it safely
 
 - Set `WEBHOOK_SECRET`. With it, a request with a missing or wrong signature gets a 401 and nothing is stored; the app keeps that payload and sends it again once the secrets match. Without it, the receiver stores unsigned posts from anyone who can reach it, and says so in its log at every start.
-- `/pair` shows the signing secret, and with it anyone can send data to the receiver or delete records in it. The receiver answers it only for a request from a private or loopback address (your own network, a VPN such as Tailscale, the machine itself) that carries no proxy header such as `X-Forwarded-For`, `Forwarded` or `X-Real-IP`; everything else gets a 404. Those headers are never believed, only taken as a sign that a proxy sits in between. Two setups make a request from the internet look like one from your network: a reverse proxy that sends no forwarding header, and Docker's own port forwarding where it hides the source address (Docker Desktop, rootless Docker). With a port open to the internet in such a setup, block `/pair` there or set `PAIRING_PAGE=0`. To pair through a reverse proxy anyway, set `PAIRING_TOKEN` to a long random string and open `/pair?token=<it>`; the token ends up in browser history and proxy logs, so remove it once the phones are paired. The receiver's own log hides it.
+- `/pair` shows the signing secret, and with it anyone can send data to the receiver or delete records in it. The receiver answers it only for a request from a private or loopback address (your own network, a VPN such as Tailscale, the machine itself) that carries no proxy header such as `X-Forwarded-For`, `Forwarded` or `X-Real-IP`; everything else gets a 404. Those headers are never believed, only taken as a sign that a proxy sits in between. Two setups make a request from the internet look like one from your network: a reverse proxy that sends no forwarding header, and port forwarding that hides the source address (Docker Desktop, rootless Docker, rootless Podman). With a port open to the internet in such a setup, block `/pair` there or set `PAIRING_PAGE=0`. To pair through a reverse proxy anyway, set `PAIRING_TOKEN` to a long random string and open `/pair?token=<it>`; the token ends up in browser history and proxy logs, so remove it once the phones are paired. The receiver's own log hides it.
 - The receiver speaks plain HTTP, and Docker publishes the receiver and Grafana on every network interface of the host. To reach the receiver from outside, put a reverse proxy with TLS (Caddy, Traefik, nginx) in front of the receiver only, use the `https://` address in the app, and allow request bodies of 32 MB. The receiver turns away anything larger with a 413.
 - The [API](api.md) shares the receiver's port. If a reverse proxy makes the receiver reachable from the internet, the API is reachable there too, behind its token; forward only `/webhook` if you don't need it outside.
 - Keep Grafana on your own network or behind a VPN. Anyone who can view a dashboard can read every health record through the data source, so don't switch on anonymous access for a Grafana that others can reach.

@@ -3,10 +3,10 @@
 # Checks that the files of a release agree with its version, the way scripts/prepare-release.sh
 # leaves them: the version is strict semver and higher than every other version tag, the Helm
 # chart's version, appVersion and four images are the version, docker-compose.yml defaults all
-# five image lines to it, server.json has it as the MCP server's version and image tag under the
-# name the MCP image's label carries, and CHANGELOG.md has a section for it. The release
-# workflow runs this on the tag, and the test workflow on a throwaway checkout after
-# prepare-release.sh.
+# five image lines to it, install.sh carries it, server.json has it as the MCP server's version
+# and image tag under the name the MCP image's label carries, mcp/server.py reports it, and
+# CHANGELOG.md has a section for it. The release workflow runs this on the tag, and the test
+# workflow on a throwaway checkout after prepare-release.sh.
 #
 # Usage: .github/scripts/check-release.sh 1.2.3
 #
@@ -68,6 +68,9 @@ if [ "$n" != 5 ]; then
     problem "docker-compose.yml should default all five image lines to $V (found $n)"
     grep -n "image:" docker-compose.yml
 fi
+
+got=$(sed -n 's/^VERSION=//p' install.sh)
+[ "$got" = "$V" ] || problem "install.sh has VERSION=${got:-(none)}; it should be $V (scripts/prepare-release.sh $V sets it)"
 
 notes=$(.github/scripts/release-notes.sh "$V")
 if [ -z "$notes" ]; then

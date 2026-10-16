@@ -71,6 +71,12 @@ The chart `life-dashboard` has no version of its own: its `version` and `appVers
 
 Values may be added, with a default that keeps the chart doing what it did. A minor version may raise the default of `postgres.cnpg.imageName` within Postgres 18 and the CloudNativePG version the chart is tested with.
 
+## The installer and the doctor
+
+- From 1.1, every release has `install.sh` attached, and `releases/latest/download/install.sh` is the latest. It installs the release it's attached to. Its commands (`install`, `doctor`), its options, the environment variables it reads (`LIFEDASH_DIR`, `LIFEDASH_ENGINE`, `LIFEDASH_YES`, `LIFEDASH_WITH_API`, `LIFEDASH_WITH_MCP`, `LIFEDASH_PULL`, `LIFEDASH_TIMEOUT`, `LIFEDASH_LABEL`, `LIFEDASH_TZ`, `LIFEDASH_DOWNLOAD`) and its exit codes (0 done, 1 failed, 2 wrong usage, 3 a prerequisite missing, 4 not healthy in time) keep their meaning. It never overwrites an existing `.env`, and `--env-only` writes only a `.env`. Options may be added.
+- `python doctor.py` in the receiver image, with `--quiet-hours`, `--mcp-url` and `--json`, exits with 1 when a check failed and 0 otherwise. The checks and their wording may change in a minor version, like log messages.
+- Docker Compose v2 from 2.20, and Podman from 4.7 with podman-compose from 1.5 or Docker Compose as its provider, stay supported for all of 1.x.
+
 ## What can change in a minor version
 
 - The provisioned dashboards: panels, layout and the queries behind them. Grafana doesn't save changes over them, so a copy you made with **Save as** is yours and isn't touched.
