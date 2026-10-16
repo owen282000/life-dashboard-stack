@@ -33,6 +33,8 @@ def test_views_md_lists_every_view_and_column(db):
 def test_no_long_dashes_in_shipped_text():
     for path in [REPO_DIR / "README.md", REPO_DIR / "docs" / "views.md",
                  REPO_DIR / "receiver" / "receiver.py", REPO_DIR / "receiver" / "views.sql",
+                 REPO_DIR / "receiver" / "pairing.py", REPO_DIR / "receiver" / "tests" / "app_parsers.py",
+                 REPO_DIR / "receiver" / "tests" / "test_pairing.py",
                  REPO_DIR / "docker-compose.yml",
                  REPO_DIR / "tools" / "sample_data.py", REPO_DIR / "tools" / "upgrade-postgres.sh",
                  REPO_DIR / "tools" / "pg-guard.sh", REPO_DIR / ".env.example",
