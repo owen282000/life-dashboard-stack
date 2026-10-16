@@ -3,7 +3,7 @@
 #
 # The dashboards live under /etc/grafana, not /var/lib/grafana: that path is the
 # grafana-data volume, which would keep the dashboards of the first version forever.
-FROM grafana/grafana:13.2.3
+FROM grafana/grafana:13.2.4
 LABEL org.opencontainers.image.title="Life Dashboard Grafana" \
       org.opencontainers.image.description="Grafana with the six Life Dashboard dashboards and the Postgres data source provisioned" \
       org.opencontainers.image.source="https://github.com/owen282000/life-dashboard-stack" \
