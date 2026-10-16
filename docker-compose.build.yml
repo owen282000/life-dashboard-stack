@@ -1,0 +1,36 @@
+# Build the three images from this repository instead of pulling them:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# Or put COMPOSE_FILE=docker-compose.yml:docker-compose.build.yml in .env, and every
+# docker compose command (tools/upgrade-postgres.sh included) uses both files.
+# The images are tagged :local, so they never stand in for a published version.
+
+services:
+  db:
+    image: life-dashboard-db:local
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    pull_policy: build
+
+  receiver:
+    image: life-dashboard-receiver:local
+    build:
+      context: .
+      dockerfile: receiver/Dockerfile
+    pull_policy: build
+
+  grafana:
+    image: life-dashboard-grafana:local
+    build:
+      context: .
+      dockerfile: grafana/Dockerfile
+    pull_policy: build
+
+  demo:
+    image: life-dashboard-receiver:local
+    build:
+      context: .
+      dockerfile: receiver/Dockerfile
+    pull_policy: build

@@ -1,5 +1,6 @@
 #!/bin/sh
-# Runs before Postgres on every start of the db service.
+# Runs before Postgres on every start of the db service: it is the entrypoint of the
+# life-dashboard-db image (db/Dockerfile), which then hands over to Postgres's own.
 #
 # Postgres 18 cannot read a Postgres 16 data directory. The old volume is mounted read-only
 # at /old. While it holds a database and the new volume has no marker from
@@ -16,13 +17,20 @@ if [ -f /old/PG_VERSION ] && [ ! -f "$marker" ] && [ "${IGNORE_OLD_VOLUME:-0}" !
 Life Dashboard: your data is still in the Postgres $(cat /old/PG_VERSION) volume.
 
 This version of the stack runs Postgres 18, which cannot open that volume.
-Move your data over once with:
+Move your data over once with the upgrade script. In a clone of the
+repository:
 
     tools/upgrade-postgres.sh <compose project name>
 
+Without a clone, in the folder with docker-compose.yml:
+
+    docker compose run --rm --no-deps -T --entrypoint cat db \\
+        /usr/local/share/life-dashboard/upgrade-postgres.sh > upgrade-postgres.sh
+    sh upgrade-postgres.sh <compose project name>
+
 It dumps the old database, restores it into the new volume and checks the
 row counts. The old volume is never changed, so the previous version of
-docker-compose.yml still starts on it if you want to go back.
+the stack still starts on it if you want to go back.
 
 To start with an empty database instead and keep the old volume as it is,
 set IGNORE_OLD_VOLUME=1 in .env.

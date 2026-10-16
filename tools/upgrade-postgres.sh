@@ -1,11 +1,20 @@
 #!/bin/sh
 # Move a Life Dashboard database from the Postgres 16 volume of earlier versions to the
-# Postgres 18 volume this version uses. Run it once, from anywhere:
+# Postgres 18 volume this version uses. Run it once, in a clone of the repository:
 #
 #     tools/upgrade-postgres.sh [compose project name]
 #
-# The project name defaults to COMPOSE_PROJECT_NAME (from the environment or .env), else the
-# name of this repository's folder, which is what docker compose uses when you do not pass -p.
+# or, without a clone, in the folder with docker-compose.yml and .env. The db image carries
+# a copy of this script:
+#
+#     docker compose run --rm --no-deps -T --entrypoint cat db \
+#         /usr/local/share/life-dashboard/upgrade-postgres.sh > upgrade-postgres.sh
+#     sh upgrade-postgres.sh [compose project name]
+#
+# It works on the docker-compose.yml in the current folder, or else on the one in the
+# repository this script sits in. The project name defaults to COMPOSE_PROJECT_NAME (from the
+# environment or .env), else the name of that folder, which is what docker compose uses when
+# you do not pass -p.
 #
 # What it does:
 #   1. checks that the new volume is absent or empty (if not, it stops here and changes
@@ -13,27 +22,35 @@
 #   2. stops the stack
 #   3. copies the old volume, starts Postgres 16 on the copy and writes a pg_dump to
 #      backups/lifedash-pg16-<date>.dump (the old volume itself is never written)
-#   4. initializes the new volume with Postgres 18 and restores the dump
+#   4. initializes the new volume with the stack's db image and restores the dump
 #   5. compares the row count of every table on both servers
 #   6. writes the marker that lets the db service start, only when all counts match
 #   7. starts the stack; the receiver then runs its migrations
 #
-# To go back: check out the previous version and start it with docker compose up -d --build
-# (--build, so the old receiver image is used). It starts on the untouched old volume.
+# To go back: start the previous version of the stack (in a clone: check out the last commit
+# on Postgres 16 and run docker compose up -d --build). It starts on the untouched old volume.
 set -eu
 
-REPO=$(cd "$(dirname "$0")/.." && pwd)
-DEFAULT_PROJECT=$(basename "$REPO" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')
-ENV_PROJECT=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$REPO/.env" 2>/dev/null | tail -n 1 | tr -d "\"' \r")
+if [ -f docker-compose.yml ]; then
+    DIR=$(pwd)
+else
+    DIR=$(cd "$(dirname "$0")/.." && pwd)
+fi
+if [ ! -f "$DIR/docker-compose.yml" ]; then
+    printf '\nUpgrade stopped: no docker-compose.yml here. Run this in the folder with docker-compose.yml.\n' >&2
+    exit 1
+fi
+DEFAULT_PROJECT=$(basename "$DIR" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')
+ENV_PROJECT=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$DIR/.env" 2>/dev/null | tail -n 1 | tr -d "\"' \r")
 PROJECT=${1:-${COMPOSE_PROJECT_NAME:-${ENV_PROJECT:-$DEFAULT_PROJECT}}}
 OLD_IMAGE=postgres:16-alpine
-NEW_IMAGE=$(sed -n 's/^ *image: *\(postgres:[^ ]*\).*/\1/p' "$REPO/docker-compose.yml" | head -n 1)
+NEW_IMAGE=$(cd "$DIR" && docker compose -p "$PROJECT" config --images db 2>/dev/null | head -n 1)
 OLD_VOLUME=${PROJECT}_db-data
 NEW_VOLUME=${PROJECT}_pgdata
 COPY_VOLUME=${PROJECT}_pg16-copy
 OLD_CONTAINER=${PROJECT}-upgrade-pg16
 NEW_CONTAINER=${PROJECT}-upgrade-pg18
-DUMP_DIR=$REPO/backups
+DUMP_DIR=$DIR/backups
 DUMP=$DUMP_DIR/lifedash-pg16-$(date +%Y-%m-%d-%H%M%S).dump
 
 say() { printf '\n==> %s\n' "$*"; }
@@ -66,9 +83,14 @@ counts() {  # container -> "schema.table count" lines, sorted
     done
 }
 
-[ -n "$NEW_IMAGE" ] || fail "no postgres image found in docker-compose.yml"
+[ -n "$NEW_IMAGE" ] || fail "docker compose finds no db service in $DIR/docker-compose.yml"
 docker volume inspect "$OLD_VOLUME" >/dev/null 2>&1 \
     || fail "volume $OLD_VOLUME does not exist. Is '$PROJECT' the right project name? See: docker volume ls"
+
+say "Getting the db image ($NEW_IMAGE)"
+if ! docker image inspect "$NEW_IMAGE" >/dev/null 2>&1; then
+    (cd "$DIR" && docker compose -p "$PROJECT" pull --ignore-buildable db && docker compose -p "$PROJECT" build db)
+fi
 
 say "Checking that $NEW_VOLUME is absent or empty"
 if docker volume inspect "$NEW_VOLUME" >/dev/null 2>&1; then
@@ -78,7 +100,7 @@ Remove it only if you are sure it holds nothing you need: docker volume rm $NEW_
 fi
 
 say "Stopping the stack ($PROJECT)"
-(cd "$REPO" && docker compose -p "$PROJECT" stop)
+(cd "$DIR" && docker compose -p "$PROJECT" stop)
 
 say "Copying $OLD_VOLUME (read-only) and dumping it with Postgres 16"
 docker volume rm "$COPY_VOLUME" >/dev/null 2>&1 || true
@@ -114,7 +136,7 @@ docker exec "$NEW_CONTAINER" sh -c 'date -u +%Y-%m-%dT%H:%M:%SZ > /var/lib/postg
 docker stop "$NEW_CONTAINER" >/dev/null
 
 say "Starting the stack"
-(cd "$REPO" && docker compose -p "$PROJECT" up -d --build)
+(cd "$DIR" && docker compose -p "$PROJECT" up -d)
 
 cat <<DONE
 

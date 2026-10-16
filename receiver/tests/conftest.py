@@ -28,10 +28,11 @@ POSTGRES_IMAGE = "postgres:18.6-alpine"
 RO_PASSWORD = "test-ro-password"
 
 
-def _compose_image() -> str:
-    for line in (REPO_DIR / "docker-compose.yml").read_text().splitlines():
-        if "image: postgres:" in line:
-            return line.split("image:", 1)[1].strip()
+def _postgres_image() -> str:
+    """The Postgres image the db image builds on, so Dependabot's bumps are tested too."""
+    for line in (REPO_DIR / "db" / "Dockerfile").read_text().splitlines():
+        if line.startswith("FROM postgres:"):
+            return line.split()[1]
     return POSTGRES_IMAGE
 
 
@@ -46,7 +47,7 @@ def server_url():
         ["docker", "run", "-d", "--rm", "--name", name,
          "--label", "com.docker.compose.project=ld-a-test",
          "-e", "POSTGRES_USER=lifedash", "-e", "POSTGRES_PASSWORD=lifedash",
-         "-p", "127.0.0.1::5432", _compose_image(),
+         "-p", "127.0.0.1::5432", _postgres_image(),
          "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"],
         check=True, capture_output=True,
     )

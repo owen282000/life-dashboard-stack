@@ -1,13 +1,16 @@
 # Life Dashboard Stack: receiver, Postgres and Grafana.
-# Settings come from .env (see .env.example). Versions are pinned; Dependabot proposes
-# updates. Try it with sample data: docker compose --profile demo up -d --build
+# Settings come from .env (see .env.example). This file is all you need: the three images
+# are published on ghcr.io for amd64 and arm64.
+#   Start:         docker compose up -d
+#   Upgrade:       set LIFEDASH_VERSION in .env, then docker compose pull && docker compose up -d
+#   Sample data:   docker compose --profile demo up -d
+#   From source:   docker-compose.build.yml in the repository builds the images instead
 
 services:
   db:
-    image: postgres:18.6-alpine
-    # The guard refuses to start while an old Postgres 16 volume still holds the data.
-    entrypoint: ["/bin/sh", "/usr/local/bin/pg-guard.sh"]
-    command: ["postgres"]
+    image: ghcr.io/owen282000/life-dashboard-db:${LIFEDASH_VERSION:-1.0.0}
+    # The image's entrypoint refuses to start while an old Postgres 16 volume still holds
+    # the data.
     environment:
       POSTGRES_USER: lifedash
       POSTGRES_PASSWORD: lifedash
@@ -17,7 +20,6 @@ services:
       - pgdata:/var/lib/postgresql
       # The Postgres 16 volume of earlier versions, read-only, for the guard and the upgrade.
       - db-data:/old:ro
-      - ./tools/pg-guard.sh:/usr/local/bin/pg-guard.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U lifedash -d lifedash"]
       interval: 5s
@@ -26,7 +28,7 @@ services:
     restart: unless-stopped
 
   receiver:
-    build: ./receiver
+    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.0.0}
     environment:
       DATABASE_URL: postgresql://lifedash:lifedash@db:5432/lifedash
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
@@ -46,12 +48,12 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:13.2.3
+    image: ghcr.io/owen282000/life-dashboard-grafana:${LIFEDASH_VERSION:-1.0.0}
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-lifedash}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-lifedash-ro}
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/life-dashboard/overview.json
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/life-dashboard/overview.json
       GF_DATE_FORMATS_DEFAULT_TIMEZONE: ${TZ:-UTC}
       GF_USERS_DEFAULT_THEME: dark
       GF_ANALYTICS_REPORTING_ENABLED: "false"
@@ -64,8 +66,6 @@ services:
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       receiver:
@@ -75,14 +75,12 @@ services:
   # Sample data for two phones (demo-android and demo-iphone). Only with --profile demo.
   demo:
     profiles: ["demo"]
-    build: ./receiver
-    command: ["python", "/tools/sample_data.py"]
+    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.0.0}
+    command: ["python", "tools/sample_data.py"]
     environment:
       URL: http://receiver:8080
       SECRET: ${WEBHOOK_SECRET:-}
       TZ: ${TZ:-UTC}
-    volumes:
-      - ./tools:/tools:ro
     depends_on:
       receiver:
         condition: service_healthy

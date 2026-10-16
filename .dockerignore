@@ -1,0 +1,12 @@
+# The three images build from the repository root (docker build -f <image>/Dockerfile .).
+# Only what they copy is sent to the builder.
+*
+!receiver/receiver.py
+!receiver/views.sql
+!receiver/requirements.txt
+!receiver/migrations/
+!tools/sample_data.py
+!tools/pg-guard.sh
+!tools/upgrade-postgres.sh
+!grafana/provisioning/
+!grafana/dashboards/
