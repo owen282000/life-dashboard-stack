@@ -428,7 +428,7 @@ def check_timezone(conn, tz: str) -> None:
     found = conn.execute("SELECT 1 FROM pg_timezone_names WHERE name = %s", (tz,)).fetchone()
     if found is None:
         raise SetupError(
-            f"TZ={tz!r} is not a time zone name Postgres knows. Set TZ in .env to an IANA name "
+            f"TZ={tz!r} is not a time zone name Postgres knows. Set TZ to an IANA name "
             "such as Europe/Amsterdam, America/Los_Angeles or UTC."
         )
 
@@ -495,8 +495,8 @@ def secret_warning(secret: str) -> str | None:
     return (
         f"{line}\n"
         "WARNING: WEBHOOK_SECRET is empty, so this receiver stores unsigned payloads from\n"
-        "anyone who can reach it. Set WEBHOOK_SECRET in .env, enter the same secret in the\n"
-        "app as the HMAC signing secret, and restart the stack.\n"
+        "anyone who can reach it. Set WEBHOOK_SECRET, enter the same secret in the\n"
+        "app as the HMAC signing secret, and restart the receiver.\n"
         f"{line}"
     )
 

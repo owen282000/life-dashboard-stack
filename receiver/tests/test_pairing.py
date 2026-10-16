@@ -316,7 +316,7 @@ def run_receiver(dsn, until, **env):
 
 
 def test_log_shows_the_code_at_start(db):
-    out = run_receiver(db, "PAIRING_LOG=0 in .env hides this block")
+    out = run_receiver(db, "PAIRING_LOG=0 hides this block")
     assert "database ready" in out
     assert pairing.pairing_url("http://192.168.1.10:8080/webhook/phone", SECRET) in out
     assert SECRET in out and "█" in out

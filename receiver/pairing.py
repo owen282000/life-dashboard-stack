@@ -192,21 +192,21 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL) -> str:
     if problem:
         out += [
             f"No pairing code: {problem}.",
-            "Set WEBHOOK_SECRET in .env and restart the stack, for example with this freshly",
+            "Set WEBHOOK_SECRET and restart the receiver, for example with this freshly",
             "generated value, which is not in use anywhere yet:",
             "",
             f"  WEBHOOK_SECRET={suggest_secret()}",
         ]
     elif not public_url:
         out += [
-            "No pairing code: PUBLIC_URL is not set, and from inside Docker the receiver cannot",
-            "tell which address your phone reaches it on. Either:",
+            "No pairing code: PUBLIC_URL is not set, and from inside its container the receiver",
+            "cannot tell which address your phone reaches it on. Either:",
             "",
-            "- set PUBLIC_URL in .env to that address, such as http://192.168.1.10:8080,",
-            "  and restart the stack; this block then shows the code, or",
-            "- open http://<address of this machine>:8080/pair in a browser on your own",
-            "  network (with your RECEIVER_PORT if you changed it). That page shows a code",
-            "  for the address you opened it with.",
+            "- set PUBLIC_URL to that address, such as http://192.168.1.10:8080, and",
+            "  restart the receiver; this block then shows the code, or",
+            "- open /pair on this receiver in a browser on your own network, such as",
+            "  http://<address of this machine>:8080/pair. That page shows a code for the",
+            "  address you opened it with.",
         ]
     elif base_problem(public_url):
         out += [f"No pairing code: PUBLIC_URL={public_url!r} does not work: {base_problem(public_url)}."]
@@ -232,7 +232,7 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL) -> str:
         for note in address_notes(public_url):
             out += ["", note]
         out += ["", "Anyone with the secret can send data to this receiver and delete records in it."]
-    out += ["", "PAIRING_LOG=0 in .env hides this block.", rule]
+    out += ["", "PAIRING_LOG=0 hides this block.", rule]
     return "\n".join(out)
 
 
@@ -327,9 +327,9 @@ def page_html(*, public_url: str, host_header: str | None, secret: str, label: s
             '<div class="warn"><p><strong>Set a signing secret first.</strong></p>',
             f"<p>{e(problem)}. Without a secret this receiver also stores unsigned data from "
             "anyone who can reach it.</p>",
-            "<p>Put this line in <code>.env</code>, a freshly generated value that is not in "
-            "use anywhere yet, and restart the stack with <code>docker compose up -d</code>. "
-            "Then reload this page.</p>",
+            "<p>Set <code>WEBHOOK_SECRET</code> to a freshly generated value that is not in "
+            "use anywhere yet, such as the one below, and restart the receiver. Then reload "
+            "this page.</p>",
             f"<pre>WEBHOOK_SECRET={e(suggest_secret())}</pre></div>",
         ]
     elif not label_ok:
@@ -337,17 +337,17 @@ def page_html(*, public_url: str, host_header: str | None, secret: str, label: s
                     "<code>-</code> and <code>_</code>. Pick another one below.</p></div>")
     elif base is None or base_problem(base):
         reason = base_problem(base) if base else "this page could not tell which address you used"
-        body.append(f'<div class="warn"><p>No code: {e(reason)}. Set <code>PUBLIC_URL</code> in '
-                    "<code>.env</code> to the address your phone reaches this receiver on, such as "
-                    "<code>http://192.168.1.10:8080</code>, and restart the stack.</p></div>")
+        body.append(f'<div class="warn"><p>No code: {e(reason)}. Set <code>PUBLIC_URL</code> '
+                    "to the address your phone reaches this receiver on, such as "
+                    "<code>http://192.168.1.10:8080</code>, and restart the receiver.</p></div>")
     else:
         hook = webhook_url(base, chosen)
         link = pairing_url(hook, secret)
         notes = address_notes(base)
         if not public_url:
             notes.insert(0, "This address is the one you opened this page with. If your phone "
-                            "reaches this receiver on another one, set PUBLIC_URL in .env and "
-                            "restart the stack.")
+                            "reaches this receiver on another one, set PUBLIC_URL and restart "
+                            "the receiver.")
         body.append('<div class="card pair">')
         body.append(svg_qr(link))
         body += [
@@ -397,7 +397,7 @@ def page_html(*, public_url: str, host_header: str | None, secret: str, label: s
         "<p>The receiver shows it only to a request from your own network (a private or "
         "loopback address) that did not come through a reverse proxy, or to one with the right "
         "<code>?token=</code> when <code>PAIRING_TOKEN</code> is set. Everything else gets a "
-        "404. Set <code>PAIRING_PAGE=0</code> in <code>.env</code> to switch the page off.</p>",
+        "404. <code>PAIRING_PAGE=0</code> switches the page off.</p>",
     ]
 
     return (
