@@ -10,7 +10,8 @@ older than the stored row on both sequence and build time is skipped, so a paylo
 arrives late cannot undo a newer one.
 
 On start it runs the SQL migrations in migrations/, rebuilds the dash views from
-views.sql, and sets up the read-only grafana_ro role. /health responds 503 until that is
+views.sql, and sets up the read-only grafana_ro role (or, where its user may not manage
+roles, uses the one that exists: roles.py). /health responds 503 until that is
 done. Then it prints a pairing QR code for the apps, and GET /pair shows the same code to
 your own network (pairing.py). With API_TOKEN set, GET /api/ is a read-only JSON API
 (api.py) that reads the dash views as dash_ro. Dependencies stay small on purpose: the
@@ -36,6 +37,7 @@ from psycopg import sql
 
 import api
 import pairing
+import roles
 
 HERE = Path(__file__).resolve().parent
 MIGRATIONS_DIR = HERE / "migrations"
@@ -409,19 +411,13 @@ def rebuild_views(conn, tz: str) -> None:
         conn.execute(text)
 
 
+GRAFANA_RO_SETTINGS = {"statement_timeout": "30s", "default_transaction_read_only": "on"}
+
+
 def setup_roles(conn, ro_password: str) -> None:
+    """grafana_ro: created and given its password here, or managed elsewhere (roles.py)."""
     with conn.transaction():
-        exists = conn.execute("SELECT 1 FROM pg_roles WHERE rolname = 'grafana_ro'").fetchone()
-        if exists is None:
-            conn.execute("CREATE ROLE grafana_ro")
-        conn.execute(
-            sql.SQL(
-                "ALTER ROLE grafana_ro WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE"
-                " NOREPLICATION NOBYPASSRLS PASSWORD {}"
-            ).format(sql.Literal(ro_password))
-        )
-        conn.execute("ALTER ROLE grafana_ro SET statement_timeout = '30s'")
-        conn.execute("ALTER ROLE grafana_ro SET default_transaction_read_only = on")
+        roles.ensure_login_role(conn, "grafana_ro", ro_password, GRAFANA_RO_SETTINGS, "GRAFANA_DB_PASSWORD")
         conn.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
         conn.execute("GRANT USAGE ON SCHEMA dash, public TO grafana_ro")
         conn.execute("GRANT SELECT ON ALL TABLES IN SCHEMA dash TO grafana_ro")
@@ -440,6 +436,8 @@ def setup_database(dsn: str, tz: str, ro_password: str) -> None:
             rebuild_views(conn, tz)
             setup_roles(conn, ro_password)
             api.setup_role(conn)
+        except roles.RoleError as exc:
+            raise SetupError(str(exc)) from exc
         finally:
             conn.execute("SELECT pg_advisory_unlock(%s)", (MIGRATION_LOCK,))
 

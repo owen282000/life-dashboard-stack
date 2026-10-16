@@ -9,7 +9,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 COPY receiver/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY receiver/receiver.py receiver/pairing.py receiver/api.py receiver/queries.py receiver/views.sql ./
+COPY receiver/receiver.py receiver/pairing.py receiver/api.py receiver/queries.py receiver/roles.py receiver/views.sql ./
 COPY receiver/migrations ./migrations
 # The demo profile runs: python tools/sample_data.py
 COPY tools/sample_data.py ./tools/
