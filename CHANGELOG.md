@@ -16,6 +16,10 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 - The API and the MCP server switch off Postgres's JIT for their connections. Their queries take milliseconds, and compiling one took longer than running it.
 
+### Fixed
+
+- The healthchecks of the receiver and the MCP server in `docker-compose.yml` work under Podman with Docker Compose as its provider, which split their Python line on its spaces, so the receiver never turned healthy and Grafana never started. Docker runs the same check as before.
+
 ## [1.0.1] - 2026-10-16
 
 ### Security
