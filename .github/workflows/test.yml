@@ -86,3 +86,108 @@ jobs:
         run: docker compose logs
       - if: always()
         run: docker compose down -v
+
+  # The Helm chart with Helm 4 and Helm 3: lint and render every value file in ci/, validate
+  # the result against the Kubernetes schemas and those of the CloudNativePG, Barman Cloud and
+  # Gateway API resources, and check that the chart's Grafana data source matches the image's.
+  chart:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        helm: [v4.3.0, v3.22.0]
+    env:
+      CHART: charts/life-dashboard
+      KUBECONFORM_VERSION: v0.8.0
+      KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ matrix.helm }}
+      - name: Install kubeconform
+        run: |
+          curl -fsSLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/$KUBECONFORM_VERSION/kubeconform-linux-amd64.tar.gz"
+          echo "$KUBECONFORM_SHA256  kubeconform.tar.gz" | sha256sum -c
+          tar -xzf kubeconform.tar.gz kubeconform && sudo mv kubeconform /usr/local/bin/
+      - name: Lint and render every value file
+        run: |
+          helm lint --strict "$CHART"
+          for values in "$CHART"/ci/*.yaml; do
+            echo "::group::$values"
+            helm lint --strict "$CHART" -f "$values"
+            helm template ci "$CHART" -f "$values" > rendered.yaml
+            kubeconform -strict -summary -kubernetes-version 1.34.0 \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+              rendered.yaml
+            echo "::endgroup::"
+          done
+      - name: The schema refuses a typo and a missing external database
+        run: |
+          if helm template ci "$CHART" --set receiver.replica=2 > /dev/null 2>&1; then echo "a typo passed"; exit 1; fi
+          if helm template ci "$CHART" --set postgres.mode=external > /dev/null 2>&1; then echo "external without a database passed"; exit 1; fi
+      - name: The chart's data source is the image's, pointed at another host
+        run: |
+          helm template ci "$CHART" | yq 'select(.kind == "ConfigMap" and .metadata.name == "ci-life-dashboard-grafana-datasource") | .data["postgres.yml"]' \
+            | yq 'del(.datasources[].url, .datasources[].jsonData.sslmode)' > chart.yml
+          yq 'del(.datasources[].url, .datasources[].jsonData.sslmode)' grafana/provisioning/datasources/postgres.yml > image.yml
+          diff image.yml chart.yml
+
+  # The chart installed in kind with the images built from this commit: CloudNativePG with the
+  # demo, the API and the MCP server, then the bundled Postgres with NetworkPolicies, each
+  # followed by helm test, an upgrade that must keep the generated secrets, and helm test again.
+  kind:
+    runs-on: ubuntu-latest
+    env:
+      CHART: charts/life-dashboard
+      CNPG_VERSION: 1.30.1
+      TAG: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+      - uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
+        with:
+          cluster_name: life-dashboard
+      - name: Build the images and load them into kind
+        run: |
+          for image in receiver grafana mcp db; do
+            docker build -q -f "$image/Dockerfile" -t "ghcr.io/owen282000/life-dashboard-$image:$TAG" .
+            kind load docker-image --name life-dashboard "ghcr.io/owen282000/life-dashboard-$image:$TAG"
+          done
+      - name: Install CloudNativePG
+        run: |
+          kubectl apply --server-side -f "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v$CNPG_VERSION/cnpg-$CNPG_VERSION.yaml"
+          kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=300s
+      - name: CloudNativePG, with the demo, the API and the MCP server
+        run: |
+          kubectl create namespace cnpg
+          kubectl label namespace cnpg pod-security.kubernetes.io/enforce=restricted
+          helm install lifedash "$CHART" -n cnpg -f "$CHART/ci/cnpg-values.yaml" --set image.tag="$TAG" --wait --timeout 15m
+          helm test lifedash -n cnpg --logs
+          kubectl -n cnpg logs deployment/lifedash-life-dashboard-receiver | grep -q "grafana_ro is managed outside the receiver"
+      - name: The bundled Postgres, with NetworkPolicies
+        run: |
+          kubectl create namespace bundled
+          kubectl label namespace bundled pod-security.kubernetes.io/enforce=restricted
+          helm install lifedash "$CHART" -n bundled -f "$CHART/ci/bundled-values.yaml" --set image.tag="$TAG" --wait --timeout 15m
+          helm test lifedash -n bundled --logs
+      - name: An upgrade keeps the generated secrets
+        run: |
+          for ns in cnpg bundled; do
+            before=$(kubectl -n "$ns" get secret -l app.kubernetes.io/component=secrets -o json | jq -S '[.items[] | {(.metadata.name): .data}]')
+            helm upgrade lifedash "$CHART" -n "$ns" -f "$CHART/ci/$ns-values.yaml" --set image.tag="$TAG" \
+              --set timezone=Europe/Amsterdam --wait --timeout 15m
+            after=$(kubectl -n "$ns" get secret -l app.kubernetes.io/component=secrets -o json | jq -S '[.items[] | {(.metadata.name): .data}]')
+            [ "$before" = "$after" ] || { echo "$ns: the generated secrets changed on upgrade"; exit 1; }
+            helm test lifedash -n "$ns" --logs
+          done
+      - if: failure()
+        run: |
+          kubectl get pods,clusters.postgresql.cnpg.io -A
+          for ns in cnpg bundled; do
+            kubectl -n "$ns" describe pods || true
+            for d in receiver grafana mcp; do kubectl -n "$ns" logs "deployment/lifedash-life-dashboard-$d" --tail=100 || true; done
+          done
