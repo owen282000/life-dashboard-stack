@@ -223,7 +223,7 @@ jobs:
       # chart-testing once: Chart.yaml against its schema, yamllint on Chart.yaml and
       # values.yaml, and helm lint with every value file in ci/.
       - if: matrix.helm == 4
-        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+        uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
         with:
           version: ${{ env.CT_VERSION }}
       - if: matrix.helm == 4
