@@ -1,31 +1,70 @@
 version: 2
 updates:
-  # The base images of the published images: python, grafana/grafana and postgres.
-  - package-ecosystem: docker
-    directories: ["/receiver", "/grafana", "/db", "/mcp"]
+  # Keeps the SHA-pinned workflow actions up to date (pins never move on their own)
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: weekly
-    groups:
-      docker:
-        patterns: ["*"]
+      interval: "weekly"
+    # The repo's commit style, "build(deps): Bump ...", set rather than guessed from history
+    commit-message:
+      prefix: "build"
+      include: "scope"
+
+  # The receiver image's Python base image
+  - package-ecosystem: "docker"
+    directory: "/receiver"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+
+  # The Grafana image's base image, which sets the Grafana version
+  - package-ecosystem: "docker"
+    directory: "/grafana"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+
+  # The db image's Postgres; the tests start their Postgres from the same line
+  - package-ecosystem: "docker"
+    directory: "/db"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
     ignore:
       # A Postgres major cannot open the previous major's data directory; it needs
       # tools/upgrade-postgres.sh, so majors are upgraded by hand.
-      - dependency-name: postgres
+      - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 
-  - package-ecosystem: pip
-    directories: ["/receiver", "/mcp"]
+  # The MCP server image's Python base image
+  - package-ecosystem: "docker"
+    directory: "/mcp"
     schedule:
-      interval: weekly
-    groups:
-      pip:
-        patterns: ["*"]
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
 
-  - package-ecosystem: github-actions
-    directory: /
+  # The receiver's pinned packages, and pytest for its tests
+  - package-ecosystem: "pip"
+    directory: "/receiver"
     schedule:
-      interval: weekly
-    groups:
-      github-actions:
-        patterns: ["*"]
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+
+  # The MCP server's pinned packages, and pytest for its tests
+  - package-ecosystem: "pip"
+    directory: "/mcp"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
