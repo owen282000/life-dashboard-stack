@@ -70,14 +70,12 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 
 The phone pushes signed JSON to you. There's no cloud account in between, so there's no login that expires, no token to refresh and no API that changes under you.
 
-```mermaid
-flowchart LR
-  A["Android phone<br>Health Connect and screen time"] -- signed JSON --> R["Receiver<br>checks every signature"]
-  I["iPhone<br>Apple Health"] -- signed JSON --> R
-  R --> P[("Postgres<br>records and dash views")]
-  P --> G["Grafana<br>six dashboards"]
-  P --> X["Read-only API<br>and MCP server"]
-```
+<p align="center">
+  <picture>
+    <source media="(max-width: 600px)" srcset="docs/how-it-works-phone.png">
+    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose six read-only tools through any MCP client, with a local model or one in the cloud." width="900">
+  </picture>
+</p>
 
 [views.md](docs/views.md) explains how records become days and nights, and [compatibility.md](docs/compatibility.md) lists what stays the same within a major version.
 
@@ -195,10 +193,12 @@ Series the Android app sends per time window are stored, but only the heart rate
 
 ## Works with
 
-| App | Version |
-|---|---|
-| [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) for Android | 1.23.0, pairing with a QR code from 1.16.0 |
-| [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios) | 1.6.0, pairing with a QR code from 1.4.0 |
+<p align="center">
+  <a href="https://github.com/owen282000/life-dashboard-companion-app"><img src="docs/family/android.png" alt="Android app: Health Connect and screen time" width="400"></a>
+  <a href="https://github.com/owen282000/life-dashboard-companion-app-ios"><img src="docs/family/ios.png" alt="iPhone app: Apple Health" width="400"></a>
+</p>
+
+Current versions: Android app 1.23.0, iPhone app 1.6.0. Pairing with a QR code needs at least 1.16.0 of the Android app or 1.4.0 of the iPhone app.
 
 Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 

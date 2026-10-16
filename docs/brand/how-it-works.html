@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<!--
+  Source for docs/how-it-works.png, the flow diagram in the README: the Android app (Health
+  Connect and screen time) and the iPhone app (Apple Health) post HMAC-signed JSON to the
+  receiver's webhook, the receiver writes it to Postgres, Grafana reads the dash views as
+  grafana_ro, and the optional read-only API and MCP server read them as dash_ro, with the AI
+  model you choose connected to the MCP server. Drawn at twice the size it is shown at (900 px
+  wide in the README), with transparent corners so it sits on GitHub's light and dark theme
+  alike. Same identity as the app and Home Assistant READMEs' diagrams: #14181C to #101C1C,
+  #30B77E. Phones get how-it-works-phone.html instead. Render from the repository root:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --screenshot=docs/how-it-works.png --window-size=1800,840 \
+      --hide-scrollbars --force-device-scale-factor=1 \
+      --default-background-color=00000000 "file://$PWD/docs/brand/how-it-works.html"
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1800px; height: 840px; overflow: hidden; background: transparent; }
+  .card {
+    position: absolute; inset: 0; border-radius: 40px; overflow: hidden;
+    background: radial-gradient(130% 130% at 25% 20%, #171D21 0%, #14181C 45%, #101C1C 100%);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #E8EDEF;
+  }
+  .grid {
+    position: absolute; inset: 0; opacity: 0.5;
+    background-image:
+      linear-gradient(rgba(48,183,126,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,183,126,0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .col-title {
+    position: absolute; top: 52px; font-size: 25px; font-weight: 700;
+    letter-spacing: 2.5px; text-transform: uppercase; color: #7E8B91;
+  }
+  .box {
+    position: absolute; border-radius: 28px; padding: 0 34px;
+    background: rgba(255,255,255,0.045); border: 2px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .box h3 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+  .box p { margin-top: 10px; font-size: 25px; line-height: 1.35; color: #AEB8BC; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; color: #6FD7A6;
+  }
+  .phone { left: 70px; width: 300px; height: 180px; }
+  .android { top: 190px; }
+  .iphone { top: 430px; }
+  .hub {
+    left: 680px; top: 128px; width: 310px; height: 300px; align-items: center; text-align: center;
+    border: 3px solid rgba(48,183,126,0.75); background: rgba(48,183,126,0.08);
+    box-shadow: 0 0 60px rgba(48,183,126,0.18);
+  }
+  .hub img { width: 104px; height: 104px; border-radius: 24px; display: block; margin-bottom: 16px; }
+  .hub { padding: 0 22px; }
+  .hub h3 { font-size: 34px; }
+  .hub p { font-size: 24px; }
+  .db { left: 680px; top: 500px; width: 310px; height: 200px; }
+  .out { left: 1090px; }
+  .grafana {
+    top: 120px; width: 640px; height: 250px; flex-direction: row; align-items: center;
+    justify-content: space-between; gap: 26px; padding-right: 26px;
+    border-color: rgba(48,183,126,0.6);
+  }
+  .grafana .t { flex: 1; }
+  .grafana .thumb {
+    flex: none; width: 300px; height: 178px; border-radius: 14px; overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.14); box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  }
+  /* overview.png at 0.35 of its 1600 CSS px: the first tiles and the 7-day table. */
+  .grafana .thumb img { width: 560px; height: auto; margin: -2px 0 0 -2px; display: block; }
+  .api { top: 410px; width: 640px; height: 130px; }
+  .mcp { top: 580px; width: 330px; height: 150px; }
+  .ai {
+    left: 1480px; top: 580px; width: 250px; height: 150px; padding: 0 30px;
+    border-style: dashed; border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.025);
+  }
+  .ai h3 { font-size: 30px; }
+  .ai p { font-size: 22px; margin-top: 8px; }
+  svg { position: absolute; inset: 0; }
+  .pill {
+    position: absolute; transform: translate(-50%, -50%);
+    padding: 8px 20px; border-radius: 999px; white-space: nowrap;
+    background: #162420; border: 2px solid rgba(48,183,126,0.45);
+    font-size: 22px; color: #6FD7A6; font-weight: 600;
+  }
+  .foot {
+    position: absolute; left: 0; right: 0; bottom: 46px; text-align: center;
+    font-size: 26px; color: #7E8B91;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid"></div>
+
+  <svg width="1800" height="840" viewBox="0 0 1800 840">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#30B77E"/>
+      </marker>
+    </defs>
+    <g stroke="#30B77E" stroke-width="5" fill="none">
+      <!-- both phones into the receiver's webhook, merged under the label -->
+      <path d="M370 520 C 470 520, 430 280, 520 280"/>
+      <path d="M370 280 L 672 280" marker-end="url(#a)"/>
+    </g>
+    <g stroke="#30B77E" stroke-width="5" fill="none" marker-end="url(#a)">
+      <!-- the receiver writes to Postgres -->
+      <path d="M835 428 L 835 492"/>
+      <!-- Postgres out to Grafana, the API and the MCP server -->
+      <path d="M990 570 C 1040 570, 1035 245, 1082 245"/>
+      <path d="M990 600 C 1040 600, 1035 475, 1082 475"/>
+      <path d="M990 630 C 1040 630, 1035 655, 1082 655"/>
+      <!-- the MCP server to the model you choose -->
+      <path d="M1420 655 L 1482 655"/>
+    </g>
+  </svg>
+
+  <div class="col-title" style="left:70px">Your phones</div>
+  <div class="col-title" style="left:680px; width:310px; text-align:center">Your server</div>
+  <div class="col-title" style="left:1090px">What you get</div>
+
+  <div class="box phone android"><h3>Android</h3><p>Health Connect and screen time per app</p></div>
+  <div class="box phone iphone"><h3>iPhone</h3><p>Apple Health</p></div>
+
+  <div class="pill" style="left:525px; top:280px">HMAC-signed JSON</div>
+
+  <div class="box hub">
+    <img src="icon.png" alt="">
+    <h3>Receiver</h3>
+    <p>A webhook that checks every signature</p>
+  </div>
+
+  <div class="box db"><h3>Postgres</h3><p>Every record once, and the <code>dash</code> views</p></div>
+
+  <div class="box out grafana">
+    <div class="t"><h3>Grafana</h3><p>Six dashboards, read as <code>grafana_ro</code></p></div>
+    <div class="thumb"><img src="../screenshots/readme/overview.png" alt=""></div>
+  </div>
+  <div class="box out api"><h3>Read-only API</h3><p>Optional. JSON for your scripts, as <code>dash_ro</code></p></div>
+  <div class="box out mcp"><h3>MCP server</h3><p>Optional. Six read-only tools, as <code>dash_ro</code></p></div>
+  <div class="box ai"><h3>Your AI</h3><p>Any MCP client, local or cloud</p></div>
+
+  <div class="foot">No cloud account in between. Docker Compose or Helm, on hardware you run.</div>
+</div>
+</body>
+</html>

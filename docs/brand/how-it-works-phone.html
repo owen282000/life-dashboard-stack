@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  Source for docs/how-it-works-phone.png, the phone version of the README flow diagram
+  (how-it-works.html): the same story stacked top to bottom, so the text stays readable on a
+  screen about 400 px wide. The README picks it with <picture> and a max-width media query.
+  Render from the repository root:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --screenshot=docs/how-it-works-phone.png --window-size=1000,2190 \
+      --hide-scrollbars --force-device-scale-factor=1 \
+      --default-background-color=00000000 "file://$PWD/docs/brand/how-it-works-phone.html"
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1000px; height: 2190px; overflow: hidden; background: transparent; }
+  .card {
+    position: absolute; inset: 0; border-radius: 40px; overflow: hidden; padding: 60px 56px;
+    background: radial-gradient(130% 130% at 25% 20%, #171D21 0%, #14181C 45%, #101C1C 100%);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #E8EDEF;
+    display: flex; flex-direction: column; align-items: stretch;
+  }
+  .grid {
+    position: absolute; inset: 0; opacity: 0.5; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(48,183,126,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,183,126,0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .title {
+    font-size: 30px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+    color: #7E8B91; margin-bottom: 22px; position: relative;
+  }
+  .arrow { height: 86px; position: relative; display: flex; justify-content: center; align-items: center; }
+  .arrow svg { height: 86px; width: 60px; }
+  .arrow.tall { height: 150px; }
+  .arrow.tall svg { height: 150px; }
+  .pill {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    padding: 10px 26px; border-radius: 999px; white-space: nowrap;
+    background: #162420; border: 2px solid rgba(48,183,126,0.45);
+    font-size: 30px; color: #6FD7A6; font-weight: 600;
+  }
+  .row { display: flex; gap: 24px; position: relative; align-items: stretch; }
+  .box {
+    flex: 1; border-radius: 28px; padding: 30px 34px; position: relative;
+    background: rgba(255,255,255,0.045); border: 2px solid rgba(255,255,255,0.1);
+  }
+  .box h3 { font-size: 44px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+  .box p { margin-top: 10px; font-size: 34px; line-height: 1.3; color: #AEB8BC; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; color: #6FD7A6; }
+  .hub {
+    flex: none; display: flex; align-items: center; gap: 30px; padding: 30px 40px;
+    border: 3px solid rgba(48,183,126,0.75); background: rgba(48,183,126,0.08);
+    box-shadow: 0 0 60px rgba(48,183,126,0.18);
+  }
+  .hub img { width: 120px; height: 120px; border-radius: 28px; display: block; flex: none; }
+  .hub p { margin-top: 6px; }
+  .dest { display: flex; flex-direction: column; gap: 18px; position: relative; }
+  .grafana { border-color: rgba(48,183,126,0.6); }
+  .thumb {
+    margin-top: 24px; height: 250px; border-radius: 16px; overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.14); box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  }
+  /* overview.png at 0.6 of its 1600 CSS px: the first tiles and the top of the 7-day table. */
+  .thumb img { width: 960px; height: auto; margin: -3px 0 0 -3px; display: block; }
+  .side { display: flex; align-items: center; position: relative; }
+  .side .box { flex: 1 1 0; align-self: stretch; }
+  .side .box.mcp { flex-grow: 1.3; }
+  .side svg { flex: none; width: 56px; height: 40px; }
+  .ai { border-style: dashed; border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.025); }
+  .nb { white-space: nowrap; }
+  .foot { margin-top: auto; padding-top: 40px; text-align: center; font-size: 32px; line-height: 1.4; color: #7E8B91; position: relative; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid"></div>
+
+  <div class="title">Your phones</div>
+  <div class="row">
+    <div class="box"><h3>Android</h3><p>Health Connect and screen time per app</p></div>
+    <div class="box"><h3>iPhone</h3><p>Apple Health</p></div>
+  </div>
+
+  <div class="arrow tall">
+    <svg viewBox="0 0 60 150"><path d="M30 6 V134" stroke="#30B77E" stroke-width="6" fill="none"/><path d="M14 122 L30 142 L46 122" stroke="#30B77E" stroke-width="6" fill="none"/></svg>
+    <div class="pill">HMAC-signed JSON</div>
+  </div>
+
+  <div class="title">Your server</div>
+  <div class="box hub">
+    <img src="icon.png" alt="">
+    <div><h3>Receiver</h3><p>A webhook that checks every signature</p></div>
+  </div>
+
+  <div class="arrow"><svg viewBox="0 0 60 86"><path d="M30 6 V70" stroke="#30B77E" stroke-width="6" fill="none"/><path d="M14 58 L30 78 L46 58" stroke="#30B77E" stroke-width="6" fill="none"/></svg></div>
+
+  <div class="dest">
+    <div class="box"><h3>Postgres</h3><p>Every record once, and the <code>dash</code> views</p></div>
+  </div>
+
+  <div class="arrow"><svg viewBox="0 0 60 86"><path d="M30 6 V70" stroke="#30B77E" stroke-width="6" fill="none"/><path d="M14 58 L30 78 L46 58" stroke="#30B77E" stroke-width="6" fill="none"/></svg></div>
+
+  <div class="title">What you get</div>
+  <div class="dest">
+    <div class="box grafana">
+      <h3>Grafana</h3><p>Six dashboards, read as <code>grafana_ro</code></p>
+      <div class="thumb"><img src="../screenshots/readme/overview.png" alt=""></div>
+    </div>
+    <div class="box"><h3>Read-only API</h3><p>Optional. JSON for your scripts, as <code>dash_ro</code></p></div>
+    <div class="side">
+      <div class="box mcp"><h3>MCP server</h3><p>Optional. Six <span class="nb">read-only</span> tools, as <code>dash_ro</code></p></div>
+      <svg viewBox="0 0 56 40"><path d="M6 20 H44" stroke="#30B77E" stroke-width="6" fill="none"/><path d="M34 8 L48 20 L34 32" stroke="#30B77E" stroke-width="6" fill="none"/></svg>
+      <div class="box ai"><h3>Your AI</h3><p>Any MCP client, local or cloud</p></div>
+    </div>
+  </div>
+
+  <div class="foot">No cloud account in between. Docker Compose<br>or Helm, on hardware you run.</div>
+</div>
+</body>
+</html>
