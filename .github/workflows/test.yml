@@ -66,6 +66,11 @@ jobs:
           dir="$RUNNER_TEMP/release"
           git clone --quiet "$GITHUB_WORKSPACE" "$dir"
           cd "$dir"
+          # Right after a release the Unreleased section is empty, and the release check rightly
+          # refuses an empty section, so the dry run gets an entry of its own.
+          if ! awk '/^## \[Unreleased\]/ { f = 1; next } /^## \[/ { exit } f && /[^[:space:]]/ { found = 1 } END { exit !found }' CHANGELOG.md; then
+            sed -i 's/^## \[Unreleased\]$/## [Unreleased]\n\n### Fixed\n\n- A dry run of the release./' CHANGELOG.md
+          fi
           echo "::group::scripts/prepare-release.sh $next"
           scripts/prepare-release.sh "$next"
           git diff --stat
