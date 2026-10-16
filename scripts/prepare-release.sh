@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Prepares a release for tagging: moves the Unreleased section of CHANGELOG.md under the new
-# version, points the image defaults in docker-compose.yml (and the Helm chart, once there is
-# one) at it, and updates the version links at the bottom of the changelog. The release
+# version, points the image defaults in docker-compose.yml and the Helm chart's version and
+# appVersion at it, and updates the version links at the bottom of the changelog. The release
 # workflow checks all of these against the tag it builds.
 #
 # Usage: scripts/prepare-release.sh 1.1.0
