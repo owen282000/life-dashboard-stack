@@ -1,0 +1,15 @@
+# A new Cluster restored from a backup, writing its own backups under another name.
+postgres:
+  mode: cnpg
+  cnpg:
+    recovery:
+      enabled: true
+      objectStoreName: lifedash-backup
+      serverName: lifedash-2026
+      targetTime: "2026-10-16 08:00:00+00"
+    backup:
+      enabled: true
+      serverName: lifedash-2026-restored
+      objectStore:
+        create: false
+        name: lifedash-backup

@@ -1,0 +1,37 @@
+{{- if .Values.demo.enabled }}
+{{- $receiver := printf "http://%s:%v" (include "life-dashboard.componentName" (list . "receiver")) .Values.receiver.service.port }}
+# Sample data for demo-android and demo-iphone, posted through the receiver after every
+# install and upgrade. Running it again is harmless: the records keep their ids.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "demo") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "demo") | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        {{- include "life-dashboard.selectorLabels" (list . "demo") | nindent 8 }}
+    spec:
+      {{- $env := printf `- name: URL
+  value: %q
+- name: TZ
+  value: %q
+- name: DAYS
+  value: %q
+- name: SECRET
+  valueFrom:
+    secretKeyRef:
+      name: %s
+      key: WEBHOOK_SECRET` $receiver .Values.timezone (toString .Values.demo.days) (include "life-dashboard.secretName" .) }}
+      {{- $script := printf "%s\n\nwait(os.environ['URL'] + '/health', 900)\nimport runpy\nrunpy.run_path('tools/sample_data.py', run_name='__main__')\n" (include "life-dashboard.pyHelpers" .) }}
+      {{- include "life-dashboard.toolPodSpec" (list . "demo" $env $script) | nindent 6 }}
+{{- end }}

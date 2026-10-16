@@ -1,0 +1,125 @@
+{{- if .Values.mcp.enabled }}
+{{- $m := .Values.mcp }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "mcp") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "mcp") | nindent 4 }}
+spec:
+  replicas: {{ $m.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list . "mcp") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "life-dashboard.selectorLabels" (list . "mcp") | nindent 8 }}
+        {{- with $m.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secrets: {{ include "life-dashboard.secretChecksum" . }}
+        {{- with $m.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "life-dashboard.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- include "life-dashboard.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "life-dashboard.podSecurityContext" (list 65534 $m.podSecurityContext) | nindent 8 }}
+      containers:
+        - name: mcp
+          image: {{ include "life-dashboard.image" (list . $m.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            - name: MCP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "life-dashboard.secretName" . }}
+                  key: MCP_TOKEN
+            - name: PGHOST
+              value: {{ include "life-dashboard.dbHost" . | quote }}
+            - name: PGPORT
+              value: {{ include "life-dashboard.dbPort" . | quote }}
+            - name: PGDATABASE
+              value: {{ include "life-dashboard.dbName" . | quote }}
+            - name: PGUSER
+              value: dash_ro
+            - name: PGSSLMODE
+              value: {{ include "life-dashboard.dbSslmode" . | quote }}
+            {{- include "life-dashboard.roPasswordEnv" (list . "dash") | nindent 12 }}
+            - name: PGPASSWORD
+              value: $(DASH_DB_PASSWORD)
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            {{- with $m.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml $m.resources | nindent 12 }}
+          securityContext:
+            {{- include "life-dashboard.containerSecurityContext" $m.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+      {{- with $m.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $m.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $m.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "life-dashboard.componentName" (list . "mcp") }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "mcp") | nindent 4 }}
+  {{- with $m.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $m.service.type }}
+  selector:
+    {{- include "life-dashboard.selectorLabels" (list . "mcp") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $m.service.port }}
+      targetPort: http
+{{- end }}

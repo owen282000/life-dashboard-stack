@@ -1,0 +1,24 @@
+# CloudNativePG with everything on: the API, the MCP server, the demo, the pairing page and
+# NetworkPolicies, the one on the CloudNativePG instances included. CI installs this one in
+# kind and runs helm test.
+timezone: Europe/Amsterdam
+receiver:
+  publicUrl: http://lifedash.test:8080
+  pairing:
+    page: true
+  api:
+    enabled: true
+mcp:
+  enabled: true
+demo:
+  enabled: true
+postgres:
+  mode: cnpg
+  cnpg:
+    storage:
+      size: 1Gi
+grafana:
+  persistence:
+    size: 256Mi
+networkPolicy:
+  enabled: true

@@ -1,0 +1,18 @@
+{{- range $component := list "receiver" "mcp" }}
+{{- $v := index $.Values $component }}
+{{- if and $v.podDisruptionBudget.enabled (or (eq $component "receiver") $v.enabled) }}
+---
+# With one replica, minAvailable 1 blocks a node drain until you scale up: use it with two.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "life-dashboard.componentName" (list $ $component) }}
+  labels:
+    {{- include "life-dashboard.labels" (list $ $component) | nindent 4 }}
+spec:
+  minAvailable: {{ $v.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "life-dashboard.selectorLabels" (list $ $component) | nindent 6 }}
+{{- end }}
+{{- end }}

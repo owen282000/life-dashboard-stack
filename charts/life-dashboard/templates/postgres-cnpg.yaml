@@ -1,0 +1,181 @@
+{{- if eq .Values.postgres.mode "cnpg" }}
+{{- $pg := .Values.postgres }}
+{{- $c := $pg.cnpg }}
+{{- $cluster := include "life-dashboard.cnpgCluster" . }}
+{{- $objectStore := default (printf "%s-backup" $cluster) $c.backup.objectStore.name }}
+# A CloudNativePG Cluster. The operator creates the database, its owner, the app Secret with
+# the owner's URL (<cluster>-app), the -rw, -ro and -r Services, and grafana_ro and dash_ro
+# from managed.roles. The receiver runs the migrations and grants as the owner.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $cluster }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "postgres") | nindent 4 }}
+  {{- if or $c.keepOnUninstall $c.annotations }}
+  annotations:
+    {{- if $c.keepOnUninstall }}
+    helm.sh/resource-policy: keep
+    {{- end }}
+    {{- with $c.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  instances: {{ $c.instances }}
+  imageName: {{ $c.imageName }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- range . }}
+    - name: {{ ternary .name . (kindIs "map" .) }}
+    {{- end }}
+  {{- end }}
+  enableSuperuserAccess: false
+  {{- if or $c.parameters $c.synchronous }}
+  postgresql:
+    {{- with $c.parameters }}
+    parameters:
+      {{- range $k, $v := . }}
+      {{ $k }}: {{ $v | toString | quote }}
+      {{- end }}
+    {{- end }}
+    {{- with $c.synchronous }}
+    synchronous:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  bootstrap:
+    {{- if $c.recovery.enabled }}
+    recovery:
+      source: origin
+      database: {{ $pg.database }}
+      owner: {{ $pg.owner }}
+      {{- with $c.recovery.targetTime }}
+      recoveryTarget:
+        targetTime: {{ . | quote }}
+      {{- end }}
+    {{- else }}
+    initdb:
+      database: {{ $pg.database }}
+      owner: {{ $pg.owner }}
+      # The read-only roles exist before managed.roles gives them LOGIN and a password, with
+      # the settings that managed roles cannot set: a statement timeout and read-only sessions.
+      # The receiver may not alter roles here, so it only grants them their reads.
+      postInitApplicationSQL:
+        - CREATE ROLE grafana_ro NOLOGIN
+        - ALTER ROLE grafana_ro SET statement_timeout = '30s'
+        - ALTER ROLE grafana_ro SET default_transaction_read_only = on
+        - CREATE ROLE dash_ro NOLOGIN
+        - ALTER ROLE dash_ro SET statement_timeout = '15s'
+        - ALTER ROLE dash_ro SET default_transaction_read_only = on
+    {{- end }}
+  {{- if $c.recovery.enabled }}
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: {{ $c.recovery.objectStoreName }}
+          serverName: {{ default $cluster $c.recovery.serverName }}
+  {{- end }}
+  managed:
+    roles:
+      - name: grafana_ro
+        ensure: present
+        comment: Life Dashboard, read-only for Grafana
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        bypassrls: false
+        inherit: true
+        connectionLimit: -1
+        passwordSecret:
+          name: {{ include "life-dashboard.grafanaRoSecret" . }}
+      - name: dash_ro
+        ensure: present
+        comment: Life Dashboard, read-only for the API and the MCP server
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        bypassrls: false
+        inherit: true
+        connectionLimit: -1
+        passwordSecret:
+          name: {{ include "life-dashboard.dashRoSecret" . }}
+  storage:
+    size: {{ $c.storage.size }}
+    {{- with $c.storage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  {{- if $c.walStorage.enabled }}
+  walStorage:
+    size: {{ $c.walStorage.size }}
+    {{- with $c.walStorage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- with $c.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $c.affinity }}
+  affinity:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if $c.backup.enabled }}
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ $objectStore }}
+        {{- with $c.backup.serverName }}
+        serverName: {{ . }}
+        {{- end }}
+  {{- end }}
+{{- if and $c.backup.enabled $c.backup.objectStore.create }}
+---
+# Where the Barman Cloud plugin writes base backups and WAL.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ $objectStore }}
+  labels:
+    {{- include "life-dashboard.labels" (list . "postgres") | nindent 4 }}
+  {{- if $c.keepOnUninstall }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  {{- with $c.backup.objectStore.retentionPolicy }}
+  retentionPolicy: {{ . | quote }}
+  {{- end }}
+  configuration:
+    {{- toYaml $c.backup.objectStore.configuration | nindent 4 }}
+{{- end }}
+{{- if and $c.backup.enabled $c.backup.scheduled.enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ $cluster }}-daily
+  labels:
+    {{- include "life-dashboard.labels" (list . "postgres") | nindent 4 }}
+  {{- if $c.keepOnUninstall }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  schedule: {{ $c.backup.scheduled.schedule | quote }}
+  immediate: {{ $c.backup.scheduled.immediate }}
+  backupOwnerReference: self
+  cluster:
+    name: {{ $cluster }}
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+{{- end }}
+{{- end }}

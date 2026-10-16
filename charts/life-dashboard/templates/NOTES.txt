@@ -1,0 +1,43 @@
+The Life Dashboard Stack is starting in namespace {{ .Release.Namespace }} (Postgres: {{ .Values.postgres.mode }}).
+{{- $secret := include "life-dashboard.secretName" . }}
+{{- $receiver := include "life-dashboard.componentName" (list . "receiver") }}
+{{- $grafana := include "life-dashboard.componentName" (list . "grafana") }}
+{{- if eq .Values.postgres.mode "cnpg" }}
+
+CloudNativePG creates the Cluster {{ include "life-dashboard.cnpgCluster" . }} first; the receiver waits for it.
+  kubectl -n {{ .Release.Namespace }} get cluster {{ include "life-dashboard.cnpgCluster" . }}
+{{- end }}
+
+Grafana (user {{ .Values.grafana.adminUser }}):
+  kubectl -n {{ .Release.Namespace }} get secret {{ $secret }} -o jsonpath='{.data.GRAFANA_PASSWORD}' | base64 -d; echo
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $grafana }} 3000:{{ .Values.grafana.service.port }}
+  then open http://localhost:3000
+
+Pair a phone: print the pairing code on your own terminal (it holds the webhook secret).
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ $receiver }} -- python pairing.py phone
+{{- if not .Values.receiver.publicUrl }}
+  receiver.publicUrl is empty, so there is no code yet. Set it to the address your phone
+  reaches the receiver on, such as https://lifedash.example.com, and upgrade.
+{{- else }}
+  The code sends the phone to {{ .Values.receiver.publicUrl }}/webhook/<label>; use a label per phone.
+{{- end }}
+{{- if .Values.receiver.pairing.page }}
+  The /pair page is on: kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $receiver }} 8080:{{ .Values.receiver.service.port }}
+  then open http://localhost:8080/pair. Every pod in the cluster can open it too; switch it off after pairing.
+{{- end }}
+{{- if .Values.receiver.api.enabled }}
+
+The read-only API is on. Its token:
+  kubectl -n {{ .Release.Namespace }} get secret {{ $secret }} -o jsonpath='{.data.API_TOKEN}' | base64 -d; echo
+{{- end }}
+{{- if .Values.mcp.enabled }}
+
+The MCP server listens on svc/{{ include "life-dashboard.componentName" (list . "mcp") }}:{{ .Values.mcp.service.port }}/mcp. Its token:
+  kubectl -n {{ .Release.Namespace }} get secret {{ $secret }} -o jsonpath='{.data.MCP_TOKEN}' | base64 -d; echo
+{{- end }}
+{{- if .Values.demo.enabled }}
+
+The demo posts sample data for demo-android and demo-iphone after every install and upgrade.
+{{- end }}
+
+Check it: helm test {{ .Release.Name }} -n {{ .Release.Namespace }} --logs
