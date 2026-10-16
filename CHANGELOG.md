@@ -4,6 +4,12 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-16
+
+### Security
+
+- Grafana 13.2.4, which fixes four security issues (CVE-2026-15577, CVE-2026-33374, CVE-2026-93294 and CVE-2026-95502). With Docker Compose, set `LIFEDASH_VERSION=1.0.1` (or `1`) in `.env` and run `docker compose pull && docker compose up -d`; on Kubernetes, `helm upgrade` to chart 1.0.1.
+
 ## [1.0.0] - 2026-10-16
 
 The first release with a version number. Until now you installed the stack from a clone of the repository and Docker built it on your machine. From this release on, every part is published as an image for amd64 and arm64, so installing and upgrading needs one `docker-compose.yml` and a `.env`, or the Helm chart on Kubernetes. It also brings pairing with a QR code, a read-only API, and an MCP server for the AI model you choose.
@@ -50,5 +56,6 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/owen282000/life-dashboard-stack/releases/tag/1.0.0

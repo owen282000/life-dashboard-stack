@@ -200,7 +200,7 @@ Series the Android app sends per time window are stored, but only the heart rate
 
 Current versions: Android app 1.23.0, iPhone app 1.6.0. Pairing with a QR code needs at least 1.16.0 of the Android app or 1.4.0 of the iPhone app.
 
-Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.3. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
+Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.4. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 
 ## Documentation
 
