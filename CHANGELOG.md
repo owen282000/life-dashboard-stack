@@ -4,6 +4,14 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Added
+
+- The receiver prints a pairing QR code in its log at startup, with the link and the URL and secret to type by hand. Life Dashboard Companion scans it like the Home Assistant integration's code. Set `PUBLIC_URL` to the address your phone reaches the receiver on; `PAIRING_LOG=0` hides the block.
+- `/pair` shows the same code as a page, only to your own network and not through a reverse proxy, or with `?token=` matching `PAIRING_TOKEN`. `?label=` gives each phone its own code. `PAIRING_PAGE=0` switches it off.
+- Without `WEBHOOK_SECRET` there is no pairing code, because the apps refuse one; the log and the page suggest a new random secret.
+
+## [1.0.0]
+
 The first release with a version number. Until now you installed the stack from a clone of the repository and Docker built it on your machine. From this release on, the three parts are published as images for amd64 and arm64, so installing and upgrading needs one `docker-compose.yml` and a `.env`.
 
 ### Added
@@ -31,4 +39,5 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/commits/main
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/owen282000/life-dashboard-stack/releases/tag/1.0.0
