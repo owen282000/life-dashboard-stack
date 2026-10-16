@@ -12,7 +12,9 @@ phone. There is no sources field, which the apps read as "both Health and Screen
 and that is what this receiver takes.
 
 The receiver shows the code in two places: a block in its log at startup, and the page
-at /pair, which is only served to your own network (see page_allowed).
+at /pair, which is only served to your own network (see page_allowed). The same block
+comes on demand from python pairing.py [label], with PUBLIC_URL and WEBHOOK_SECRET from the
+environment, for instance through kubectl exec with the log and the page both off.
 
 Nothing here touches the database.
 """
@@ -184,8 +186,8 @@ def svg_qr(link: str) -> str:
 
 # ------------------------------------------------------------------ the log block
 
-def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL) -> str:
-    """What the receiver prints at startup when PAIRING_LOG is on."""
+def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start: bool = True) -> str:
+    """What the receiver prints at startup when PAIRING_LOG is on, or pairing.py on demand."""
     rule = "=" * 72
     out = [rule, "Pair a phone with this receiver", ""]
     problem = secret_problem(secret)
@@ -232,7 +234,9 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL) -> str:
         for note in address_notes(public_url):
             out += ["", note]
         out += ["", "Anyone with the secret can send data to this receiver and delete records in it."]
-    out += ["", "PAIRING_LOG=0 hides this block.", rule]
+    if at_start:
+        out += ["", "PAIRING_LOG=0 hides this block."]
+    out.append(rule)
     return "\n".join(out)
 
 
@@ -421,3 +425,22 @@ PAGE_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; "
                                "form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 }
+
+
+def main(argv: list[str]) -> int:
+    """python pairing.py [label]: the pairing block for one phone, on demand."""
+    import os
+
+    label = argv[0] if argv else DEFAULT_LABEL
+    if not LABEL_RE.match(label):
+        print("A label is 1 to 32 lowercase letters, digits, - and _.")
+        return 2
+    print(log_block(os.environ.get("PUBLIC_URL", "").strip(), os.environ.get("WEBHOOK_SECRET", ""),
+                    label, at_start=False))
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main(sys.argv[1:]))
