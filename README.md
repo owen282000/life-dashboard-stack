@@ -74,7 +74,7 @@ The phone pushes signed JSON to you. There's no cloud account in between, so the
 <p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/how-it-works-phone.png">
-    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose six read-only tools through any MCP client, with a local model or one in the cloud." width="900">
+    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose eight read-only tools through any MCP client, with a local model or one in the cloud." width="900">
   </picture>
 </p>
 

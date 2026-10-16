@@ -51,6 +51,10 @@ if s.get("version") != v:
     problems.append(f"server.json has version {s.get('version')}; it should be {v} (scripts/prepare-release.sh {v} sets it)")
 if not label or s.get("name") != label:
     problems.append(f"server.json has name {s.get('name')}, but mcp/Dockerfile labels the image {label or '(no label)'}")
+import re
+m = re.search(r'^VERSION = "([^"]*)"', open("mcp/server.py").read(), re.M)
+if not m or m.group(1) != v:
+    problems.append(f"mcp/server.py reports version {m.group(1) if m else '(none)'}; it should be {v} (scripts/prepare-release.sh {v} sets it)")
 images = [p.get("identifier") for p in s.get("packages", [])]
 if images != [f"ghcr.io/owen282000/life-dashboard-mcp:{v}"]:
     problems.append(f"server.json should have one package, ghcr.io/owen282000/life-dashboard-mcp:{v} (found {images})")

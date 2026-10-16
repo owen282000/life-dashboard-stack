@@ -60,8 +60,11 @@ Android (RMSSD) and from an iPhone (SDNN) are different measures and must not be
 You are reading personal health data: answer what was asked, and do not give medical \
 diagnoses."""
 
+# The stack's version; scripts/prepare-release.sh sets it with every release.
+VERSION = "1.0.1"
+
 server = MCPServer("life-dashboard", title="Life Dashboard (read-only)", instructions=INSTRUCTIONS,
-                   version="1.2.0")
+                   version=VERSION)
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True,
                             open_world_hint=False)

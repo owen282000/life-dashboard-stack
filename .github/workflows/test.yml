@@ -76,8 +76,8 @@ jobs:
           scripts/prepare-release.sh "$next"
           git diff --stat
           echo "::endgroup::"
-          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml server.json " ] \
-            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, Chart.yaml and server.json"; exit 1; }
+          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml mcp/server.py server.json " ] \
+            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, Chart.yaml, mcp/server.py and server.json"; exit 1; }
           grep -q "^## \[$next\] - $(date +%Y-%m-%d)$" CHANGELOG.md
           grep -q "^\[Unreleased\]: .*/compare/$next\.\.\.HEAD$" CHANGELOG.md
           grep -q "^\[$next\]: " CHANGELOG.md

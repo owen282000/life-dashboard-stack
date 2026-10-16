@@ -184,7 +184,8 @@ def test_series(base):
 
 def test_trend_compares_two_periods(make_db, make_api):
     dsn = make_db("UTC")
-    today = date.today()
+    # The stack's today, in its TZ; the machine's own date differs around midnight.
+    today = datetime.now(timezone.utc).date()
     totals = [{"date": (today - timedelta(days=n)).isoformat(), "steps": 1000 if n > 7 else 2000}
               for n in range(0, 15)]
     post(dsn, envelope(1, daily_totals=totals))

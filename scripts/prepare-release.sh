@@ -80,5 +80,7 @@ fi
 # The MCP Registry entry: the server's version and the image it points at.
 sed -E -i.bak -e 's/^  "version": "[^"]*"/  "version": "'"$V"'"/' \
     -e 's#"ghcr\.io/owen282000/life-dashboard-mcp:[^"]*"#"ghcr.io/owen282000/life-dashboard-mcp:'"$V"'"#' server.json && rm server.json.bak
+# The version the MCP server reports to clients.
+sed -E -i.bak 's/^VERSION = "[^"]*"/VERSION = "'"$V"'"/' mcp/server.py && rm mcp/server.py.bak
 
 echo "Prepared $V (previous ${PREV:-none}). Check the changelog section, then commit and: git tag $V && git push origin $V"

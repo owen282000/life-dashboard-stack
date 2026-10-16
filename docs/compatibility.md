@@ -44,14 +44,14 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 ## The environment variables
 
-The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN`, `DASH_DB_PASSWORD`, `MCP_TOKEN` and `MCP_PORT`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. From 1.3, `python pairing.py [label]` in the receiver image prints the pairing block on demand, from `PUBLIC_URL` and `WEBHOOK_SECRET`. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
+The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN`, `DASH_DB_PASSWORD`, `MCP_TOKEN` and `MCP_PORT`, and the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. `python pairing.py [label]` in the receiver image prints the pairing block on demand, from `PUBLIC_URL` and `WEBHOOK_SECRET`. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
 
 ## The ports, services and volumes
 
 - The receiver listens on 8080 and Grafana on 3000, inside their containers and as the defaults of `RECEIVER_PORT` and `GRAFANA_PORT`. Postgres isn't published.
 - The Compose services `db`, `receiver` and `grafana`, `mcp` in the profile `mcp`, and the volumes `pgdata` (Postgres), `grafana-data` (Grafana) and `db-data` (the old Postgres 16 volume). Renaming a volume would leave your data behind, so that never happens within a major version.
 - The images `ghcr.io/owen282000/life-dashboard-receiver`, `-grafana`, `-db` and `-mcp`, tagged `1.2.3`, `1.2`, `1` and `latest`. `LIFEDASH_VERSION=1` follows every 1.x release. The receiver and MCP images run as user and group 65534, Grafana's as 472 and the db image's Postgres as 70.
-- The chart at `oci://ghcr.io/owen282000/charts/life-dashboard`, published with every release from 1.3.0 on, under the same version as the images.
+- The chart at `oci://ghcr.io/owen282000/charts/life-dashboard`, published with every release from 1.0.0 on, under the same version as the images.
 
 ## The Helm chart
 

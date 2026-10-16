@@ -12,7 +12,8 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx2
 import psycopg
@@ -25,7 +26,7 @@ from psycopg import sql
 import api
 import receiver
 import server
-from conftest import MCP_DIR, REPO_DIR, receiver_conftest
+from conftest import MCP_DIR, REPO_DIR, TZ, receiver_conftest
 
 TOKEN = "test-mcp-token-0123456789abcdef"
 PYTHONPATH = str(REPO_DIR / "receiver")  # queries.py; the image has it next to server.py
@@ -49,8 +50,13 @@ def ok(result):
     return result.structured_content
 
 
+def stack_today():
+    # The demo data's today is in the stack's TZ; the machine's own date differs around midnight.
+    return datetime.now(ZoneInfo(TZ)).date()
+
+
 def last_days(n):
-    today = date.today()
+    today = stack_today()
     return (today - timedelta(days=n - 1)).isoformat(), today.isoformat()
 
 
@@ -108,7 +114,7 @@ def test_trend(sample_dsn):
     data = ok(result)
     assert [t["phone"] for t in data["phones"]] == ["demo-android", "demo-iphone"]
     t = data["phones"][0]
-    assert t["period"]["to"] == (date.today() - timedelta(days=1)).isoformat()
+    assert t["period"]["to"] == (stack_today() - timedelta(days=1)).isoformat()
     assert t["period"]["days_with_data"] == 7 and t["previous"]["days_with_data"] == 7
     assert t["change_pct"] is not None
     assert "% on the 7 days before" in result.content[0].text
@@ -117,7 +123,7 @@ def test_trend(sample_dsn):
 
 
 def test_screen_time(sample_dsn):
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    yesterday = (stack_today() - timedelta(days=1)).isoformat()
     result = call("screen_time", {"date": yesterday})
     data = ok(result)
     (entry,) = data["phones"]
@@ -136,7 +142,7 @@ def test_data_catalog(sample_dsn):
     assert set(android["tools"]) == set(server.TOOL_READS)
     assert android["tools"]["daily_summary"] == list(server.queries.DAY_FIELDS)
     assert "screen_min" not in iphone["tools"]["daily_summary"] and iphone["tools"]["screen_time"] is None
-    assert android["tools"]["screen_time"][1] == date.today().isoformat()
+    assert android["tools"]["screen_time"][1] == stack_today().isoformat()
     assert "hrv_rmssd" in android["tools"]["trend"] and "hrv_sdnn" not in android["tools"]["trend"]
     assert "hrv_sdnn" in iphone["tools"]["trend"] and "hrv_rmssd" not in iphone["tools"]["trend"]
     types = {t["type"]: t for t in android["types"]}
