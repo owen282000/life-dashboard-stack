@@ -11,7 +11,9 @@ arrives late cannot undo a newer one.
 
 On start it runs the SQL migrations in migrations/, rebuilds the dash views from
 views.sql, and sets up the read-only grafana_ro role. /health responds 503 until that is
-done. Dependencies stay small on purpose: the standard library's http.server plus psycopg.
+done. Then it prints a pairing QR code for the apps, and GET /pair shows the same code to
+your own network (pairing.py). Dependencies stay small on purpose: the standard library's
+http.server plus psycopg, and segno for the QR code.
 """
 
 import hashlib
@@ -26,9 +28,12 @@ import time
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs
 
 import psycopg
 from psycopg import sql
+
+import pairing
 
 HERE = Path(__file__).resolve().parent
 MIGRATIONS_DIR = HERE / "migrations"
@@ -39,9 +44,14 @@ SECRET = os.environ.get("WEBHOOK_SECRET", "")
 PORT = int(os.environ.get("PORT", "8080"))
 TZ = os.environ.get("TZ", "") or "UTC"
 GRAFANA_DB_PASSWORD = os.environ.get("GRAFANA_DB_PASSWORD", "") or "lifedash-ro"
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip()
+PAIRING_LOG = pairing.is_on(os.environ.get("PAIRING_LOG"))
+PAIRING_PAGE = pairing.is_on(os.environ.get("PAIRING_PAGE"))
+PAIRING_TOKEN = os.environ.get("PAIRING_TOKEN", "").strip()
 
 MAX_BODY = 32 * 1024 * 1024
 LABEL_RE = re.compile(r"^/webhook(?:/([a-z0-9_-]{1,32}))?$")
+TOKEN_IN_PATH_RE = re.compile(r"([?&]token=)[^&\s\"]*")
 MIGRATION_LOCK = 4_242_017  # pg_advisory_lock key, the same constant in every receiver
 
 # Envelope keys that are never record arrays.
@@ -450,6 +460,9 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "LifeDashboardReceiver"
     dsn = DB_DSN
     secret = SECRET
+    public_url = PUBLIC_URL
+    pairing_page = PAIRING_PAGE
+    pairing_token = PAIRING_TOKEN
 
     def _reply(self, code: int, body: dict) -> None:
         data = json.dumps(body).encode()
@@ -462,13 +475,38 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):  # noqa: N802
-        if self.path.split("?", 1)[0] == "/health":
+        path, _, query = self.path.partition("?")
+        if path == "/health":
             if READY.is_set():
                 self._reply(200, {"status": "ok"})
             else:
                 self._reply(503, {"status": "starting"})
+        elif path == "/pair":
+            self._pair_page(parse_qs(query))
         else:
             self._reply(404, {"error": "not found"})
+
+    def client_ip(self) -> str:
+        return self.client_address[0]
+
+    def _pair_page(self, params: dict) -> None:
+        """The pairing code as a page. It holds the secret, so a refusal looks like any 404."""
+        token = params.get("token", [None])[-1]
+        if not self.pairing_page or not pairing.page_allowed(
+                self.client_ip(), self.headers.keys(), token, self.pairing_token):
+            self._reply(404, {"error": "not found"})
+            return
+        html = pairing.page_html(
+            public_url=self.public_url, host_header=self.headers.get("Host"), secret=self.secret,
+            label=params.get("label", [None])[-1],
+            token=token if pairing.token_matches(token, self.pairing_token) else None,
+        ).encode()
+        self.send_response(200)
+        for name, value in pairing.PAGE_HEADERS.items():
+            self.send_header(name, value)
+        self.send_header("Content-Length", str(len(html)))
+        self.end_headers()
+        self.wfile.write(html)
 
     def do_POST(self):  # noqa: N802
         match = LABEL_RE.match(self.path.split("?", 1)[0])
@@ -512,7 +550,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if self.command == "GET" and self.path == "/health":
             return  # the healthcheck runs every few seconds
-        print(f"{self.address_string()} {fmt % args}", flush=True)
+        text = TOKEN_IN_PATH_RE.sub(r"\1<hidden>", fmt % args)
+        print(f"{self.address_string()} {text}", flush=True)
 
 
 def main() -> None:
@@ -535,6 +574,10 @@ def main() -> None:
         sys.exit(2)
     READY.set()
     print("database ready: migrations applied, dash views rebuilt", flush=True)
+    if PAIRING_TOKEN and len(PAIRING_TOKEN) < pairing.MIN_TOKEN:
+        log(f"PAIRING_TOKEN is ignored: it needs at least {pairing.MIN_TOKEN} characters")
+    if PAIRING_LOG:
+        print(pairing.log_block(PUBLIC_URL, SECRET), flush=True)
     threading.Event().wait()
 
 

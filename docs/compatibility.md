@@ -32,7 +32,7 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 ## The environment variables
 
-The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION` and `IGNORE_OLD_VOLUME`. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
+The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
 
 ## The ports, services and volumes
 
