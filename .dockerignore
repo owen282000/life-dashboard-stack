@@ -3,6 +3,8 @@
 *
 !receiver/receiver.py
 !receiver/pairing.py
+!receiver/api.py
+!receiver/queries.py
 !receiver/views.sql
 !receiver/requirements.txt
 !receiver/migrations/

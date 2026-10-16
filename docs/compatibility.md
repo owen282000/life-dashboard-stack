@@ -30,9 +30,15 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 - `SELECT` on `records`, `buckets` and every view in `dash`, `USAGE` on the `dash` and `public` schemas, and nothing else: no access to the ledger tables, read-only transactions and a 30-second statement timeout.
 - The Grafana data source **LifeDashboard Postgres** with the uid `lifedash-postgres`, which panels of your own can point at.
 
+## The read-only API and `dash_ro`
+
+- With `API_TOKEN` set, the receiver answers `GET` requests under `/api/` on its own port: `/api/phones`, `/api/days`, `/api/sleep`, `/api/workouts`, `/api/screen-time`, `/api/series` and `/api/trend`, with the parameters, fields, metric names and units in [api.md](api.md). Fields and metrics may be added; none are renamed, removed or given another unit. Without a token every `/api/` path is a 404.
+- `Authorization: Bearer <API_TOKEN>`, a 401 without it, a 400 for bad input, a 404 for an unknown phone, and the limits of 400 days per range and 5,000 rows per answer. A limit may be raised, never lowered.
+- The role `dash_ro`, with its password from `DASH_DB_PASSWORD`: `USAGE` on `dash`, `SELECT` on every view in it, and nothing else, with read-only transactions and a 15-second statement timeout.
+
 ## The environment variables
 
-The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
+The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN` and `DASH_DB_PASSWORD`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
 
 ## The ports, services and volumes
 

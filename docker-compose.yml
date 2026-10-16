@@ -38,6 +38,9 @@ services:
       PAIRING_LOG: ${PAIRING_LOG:-1}
       PAIRING_PAGE: ${PAIRING_PAGE:-1}
       PAIRING_TOKEN: ${PAIRING_TOKEN:-}
+      # The read-only API under /api/ is off while API_TOKEN is empty. docs/api.md
+      API_TOKEN: ${API_TOKEN:-}
+      DASH_DB_PASSWORD: ${DASH_DB_PASSWORD:-lifedash-dash-ro}
     ports:
       - "${RECEIVER_PORT:-8080}:8080"
     depends_on:

@@ -9,6 +9,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 - The receiver prints a pairing QR code in its log at startup, with the link and the URL and secret to type by hand. Life Dashboard Companion scans it like the Home Assistant integration's code. Set `PUBLIC_URL` to the address your phone reaches the receiver on; `PAIRING_LOG=0` hides the block.
 - `/pair` shows the same code as a page, only to your own network and not through a reverse proxy, or with `?token=` matching `PAIRING_TOKEN`. `?label=` gives each phone its own code. `PAIRING_PAGE=0` switches it off.
 - Without `WEBHOOK_SECRET` there is no pairing code, because the apps refuse one; the log and the page suggest a new random secret.
+- A read-only JSON API under `/api/` on the receiver's port, off until `API_TOKEN` is set: `phones`, `days`, `sleep`, `workouts`, `screen-time`, `series` and `trend`, with the token as a bearer token, ranges of up to 400 days and at most 5,000 rows per answer. [docs/api.md](docs/api.md) describes every endpoint.
+- `dash_ro`, a database user that can only read the `dash` views, with read-only sessions and a 15-second statement timeout. The API reads through it, never as the database owner. Its password is `DASH_DB_PASSWORD`.
 
 ## [1.0.0]
 

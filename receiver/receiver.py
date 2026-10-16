@@ -12,8 +12,9 @@ arrives late cannot undo a newer one.
 On start it runs the SQL migrations in migrations/, rebuilds the dash views from
 views.sql, and sets up the read-only grafana_ro role. /health responds 503 until that is
 done. Then it prints a pairing QR code for the apps, and GET /pair shows the same code to
-your own network (pairing.py). Dependencies stay small on purpose: the standard library's
-http.server plus psycopg, and segno for the QR code.
+your own network (pairing.py). With API_TOKEN set, GET /api/ is a read-only JSON API
+(api.py) that reads the dash views as dash_ro. Dependencies stay small on purpose: the
+standard library's http.server plus psycopg, and segno for the QR code.
 """
 
 import hashlib
@@ -33,6 +34,7 @@ from urllib.parse import parse_qs
 import psycopg
 from psycopg import sql
 
+import api
 import pairing
 
 HERE = Path(__file__).resolve().parent
@@ -437,6 +439,7 @@ def setup_database(dsn: str, tz: str, ro_password: str) -> None:
             migrate(conn)
             rebuild_views(conn, tz)
             setup_roles(conn, ro_password)
+            api.setup_role(conn)
         finally:
             conn.execute("SELECT pg_advisory_unlock(%s)", (MIGRATION_LOCK,))
 
@@ -463,11 +466,15 @@ class Handler(BaseHTTPRequestHandler):
     public_url = PUBLIC_URL
     pairing_page = PAIRING_PAGE
     pairing_token = PAIRING_TOKEN
+    api_token = api.API_TOKEN
+    api_dsn = api.dsn(DB_DSN)
 
-    def _reply(self, code: int, body: dict) -> None:
+    def _reply(self, code: int, body: dict, headers: dict | None = None) -> None:
         data = json.dumps(body).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.send_header("Content-Length", str(len(data)))
         if self.close_connection:
             self.send_header("Connection", "close")
@@ -483,6 +490,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._reply(503, {"status": "starting"})
         elif path == "/pair":
             self._pair_page(parse_qs(query))
+        elif path.startswith("/api/"):
+            if READY.is_set():
+                self._reply(*api.handle(self.path, self.headers.get("Authorization"), self.api_token, self.api_dsn))
+            else:
+                self._reply(503, {"error": "starting"})
         else:
             self._reply(404, {"error": "not found"})
 
@@ -561,6 +573,7 @@ def main() -> None:
     warning = secret_warning(SECRET)
     if warning:
         log(warning)
+    log(api.status_line())
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()
