@@ -13,5 +13,7 @@ COPY receiver/receiver.py receiver/pairing.py receiver/api.py receiver/queries.p
 COPY receiver/migrations ./migrations
 # The demo profile runs: python tools/sample_data.py
 COPY tools/sample_data.py ./tools/
+# It writes no files, so it runs as nobody, by number, so Kubernetes can tell it's not root.
+USER 65534:65534
 EXPOSE 8080
 CMD ["python", "receiver.py"]

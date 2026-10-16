@@ -10,6 +10,7 @@ ENV PYTHONUNBUFFERED=1
 COPY mcp/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY receiver/queries.py mcp/server.py ./
-USER nobody
+# nobody, by number, so Kubernetes can tell it's not root.
+USER 65534:65534
 EXPOSE 8090
 CMD ["python", "server.py"]
