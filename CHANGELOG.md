@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-16
+
 The first release with a version number. Until now you installed the stack from a clone of the repository and Docker built it on your machine. From this release on, every part is published as an image for amd64 and arm64, so installing and upgrading needs one `docker-compose.yml` and a `.env`, or the Helm chart on Kubernetes. It also brings pairing with a QR code, a read-only API, and an MCP server for the AI model you choose.
 
 ### Added
@@ -47,3 +49,6 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A guard that refuses to start Postgres 18 while the data is still in the Postgres 16 volume of earlier versions, and `tools/upgrade-postgres.sh`, which moves it over with a dump and a restore and leaves the old volume untouched.
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
+
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/owen282000/life-dashboard-stack/releases/tag/1.0.0
