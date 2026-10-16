@@ -139,14 +139,30 @@ The settings in `.env`:
 - `TZ`: your time zone as an IANA name, such as `Europe/Amsterdam` or `America/New_York`. Days, nights and hours in the dashboards follow it. The receiver refuses to start with a name Postgres doesn't know.
 - `GRAFANA_PASSWORD`: the password of Grafana's `admin` user.
 - `GRAFANA_DB_PASSWORD`: the password of `grafana_ro`, the read-only database user Grafana connects with.
+- `PUBLIC_URL`: the address your phone reaches this machine on, such as `http://192.168.1.10:8080`. It goes in the pairing code.
 
 Ports 8080 or 3000 already taken? Change `RECEIVER_PORT` or `GRAFANA_PORT` in `.env` and use those ports below. After a change to `.env`, run `docker compose up -d` again.
 
 The folder name is the Compose project name, which is part of the volume names that hold your data. Keep the folder, or set `COMPOSE_PROJECT_NAME` in `.env` when you move it.
 
+### Pair the app
+
+Like the Home Assistant integration, the receiver shows a QR code that the app scans, so you type neither the address nor the secret. You need Life Dashboard Companion 1.16.0 or newer on Android, or 1.4.0 or newer on iPhone.
+
+1. Show the code. With `PUBLIC_URL` set, it is in the receiver's log at every start: `docker compose logs receiver`. The log draws it for a dark terminal. Or open `http://<address of this machine>:8080/pair` in a browser on your own network; that page shows the same code, and without `PUBLIC_URL` it uses the address you opened it with.
+2. In the app, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**, or point the phone's camera at the code.
+3. Check the address the app shows and tap **Pair**. The app sends a test ping. On Android, leave **Health** and **Screen Time** both on, so screen time and health data land under one **Phone**, and leave plain HTTP allowed for an `http://` address.
+4. Tap **Sync Now**, on Android on both tabs, and continue with **Backfill** as in the steps below.
+
+The code holds the webhook URL with the label `phone`, the secret and the name Life Dashboard Stack, in the pairing format of the Home Assistant integration. For a second phone, open `/pair?label=<label>` or use the **Another phone** field on the page: every phone needs its own label, see [Several phones](#several-phones). With an empty `WEBHOOK_SECRET` there is no code, because the apps refuse one without a secret; the log and the page suggest a new random one to put in `.env`.
+
+An iPhone refuses plain `http://` to a name like `nas.lan`. Use the IP address or an `https://` address in `PUBLIC_URL`; the page and the log point it out.
+
+The page and the log show the signing secret. [Exposing it safely](#exposing-it-safely) says who can open the page; `PAIRING_LOG=0` keeps the secret out of the log, and `PAIRING_PAGE=0` switches the page off.
+
 ### Connect a phone
 
-Pick a short label for the phone: lowercase letters, digits, `-` and `_`, at most 32 characters, such as `pixel` or `iphone`. The webhook URL is:
+To set it up by hand instead, pick a short label for the phone: lowercase letters, digits, `-` and `_`, at most 32 characters, such as `pixel` or `iphone`. The webhook URL is:
 
 ```
 http://<address of this machine>:8080/webhook/<label>
@@ -269,6 +285,7 @@ Restart the receiver afterward (`docker compose restart receiver`) so it rebuild
 ## Exposing it safely
 
 - Set `WEBHOOK_SECRET`. With it, a request with a missing or wrong signature gets a 401 and nothing is stored; the app keeps that payload and sends it again once the secrets match. Without it, the receiver stores unsigned posts from anyone who can reach it, and says so in its log at every start.
+- `/pair` shows the signing secret, and with it anyone can send data to the receiver or delete records in it. The receiver answers it only for a request from a private or loopback address (your own network, a VPN such as Tailscale, the machine itself) that carries no proxy header such as `X-Forwarded-For`, `Forwarded` or `X-Real-IP`; everything else gets a 404. Those headers are never believed, only taken as a sign that a proxy sits in between. Two setups make a request from the internet look like one from your network: a reverse proxy that sends no forwarding header, and Docker's own port forwarding where it hides the source address (Docker Desktop, rootless Docker). With a port open to the internet in such a setup, block `/pair` there or set `PAIRING_PAGE=0`. To pair through a reverse proxy anyway, set `PAIRING_TOKEN` to a long random string and open `/pair?token=<it>`; the token ends up in browser history and proxy logs, so remove it once the phones are paired. The receiver's own log hides it.
 - The receiver speaks plain HTTP, and Docker publishes the receiver and Grafana on every network interface of the host. To reach the receiver from outside, put a reverse proxy with TLS (Caddy, Traefik, nginx) in front of the receiver only, use the `https://` address in the app, and allow request bodies of 32 MB. The receiver turns away anything larger with a 413.
 - Keep Grafana on your own network or behind a VPN. Anyone who can view a dashboard can read every health record through the data source, so don't switch on anonymous access for a Grafana that others can reach.
 - Grafana only reads `GRAFANA_PASSWORD` when it creates its admin user on the first start; change the password in Grafana after that. `GRAFANA_DB_PASSWORD` is read at every start, by the receiver and by Grafana.
