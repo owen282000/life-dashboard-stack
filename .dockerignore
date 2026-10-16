@@ -2,6 +2,7 @@
 # Only what they copy is sent to the builder.
 *
 !receiver/receiver.py
+!receiver/pairing.py
 !receiver/views.sql
 !receiver/requirements.txt
 !receiver/migrations/
