@@ -25,6 +25,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: The tag is strict semver and higher than the last version
+        run: |
+          echo "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "$TAG is not strict semver (X.Y.Z)"; exit 1; }
+          prev=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$TAG" | sort -V | tail -1)
+          if [ -n "$prev" ] && [ "$(printf '%s\n%s\n' "$prev" "$TAG" | sort -V | tail -1)" != "$TAG" ]; then
+            echo "$TAG is not higher than the latest version $prev"
+            exit 1
+          fi
       - name: docker-compose.yml uses the tagged version
         run: |
           n=$(grep -cF ":\${LIFEDASH_VERSION:-$TAG}" docker-compose.yml || true)

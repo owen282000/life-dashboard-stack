@@ -37,7 +37,8 @@ def test_no_long_dashes_in_shipped_text():
                  REPO_DIR / "tools" / "sample_data.py", REPO_DIR / "tools" / "upgrade-postgres.sh",
                  REPO_DIR / "tools" / "pg-guard.sh", REPO_DIR / ".env.example",
                  REPO_DIR / "docker-compose.build.yml", REPO_DIR / "CHANGELOG.md",
-                 REPO_DIR / "docs" / "compatibility.md",
+                 REPO_DIR / "docs" / "compatibility.md", REPO_DIR / "docs" / "releasing.md",
+                 REPO_DIR / "scripts" / "prepare-release.sh", REPO_DIR / ".githooks" / "pre-push",
                  *(REPO_DIR / ".github" / "workflows").glob("*.yml"),
                  *REPO_DIR.glob("*/Dockerfile"),
                  *(REPO_DIR / "receiver" / "migrations").glob("*.sql")]:
