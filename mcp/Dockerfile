@@ -1,10 +1,13 @@
 # The read-only MCP server, with the receiver's query module.
 # Build from the repository root: docker build -f mcp/Dockerfile .
+# The MCP Registry lists it under the name in io.modelcontextprotocol.server.name, which must
+# equal "name" in server.json.
 FROM python:3.14.8-slim
 LABEL org.opencontainers.image.title="Life Dashboard MCP server" \
       org.opencontainers.image.description="Read-only MCP server that lets a model of your choice read the Life Dashboard views" \
       org.opencontainers.image.source="https://github.com/owen282000/life-dashboard-stack" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="MIT" \
+      io.modelcontextprotocol.server.name="io.github.owen282000/life-dashboard"
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 COPY mcp/requirements.txt .

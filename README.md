@@ -13,6 +13,7 @@
   <a href="https://github.com/owen282000/life-dashboard-stack/releases/latest"><img src="https://img.shields.io/github/v/release/owen282000/life-dashboard-stack" alt="Latest release"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker%20Compose-3%20services-2496ED" alt="Docker Compose with three services"></a>
   <a href="docs/kubernetes.md"><img src="https://img.shields.io/badge/Helm-chart-0F1689" alt="Helm chart for Kubernetes"></a>
+  <a href="https://artifacthub.io/packages/search?repo=life-dashboard"><img src="https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard" alt="Artifact Hub"></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Postgres-18-4169E1" alt="Postgres 18"></a>
   <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-13.2-F46800" alt="Grafana 13.2"></a>
   <a href="docs/mcp.md"><img src="https://img.shields.io/badge/MCP-server-6E56CF" alt="MCP server"></a>
@@ -73,7 +74,7 @@ The phone pushes signed JSON to you. There's no cloud account in between, so the
 <p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/how-it-works-phone.png">
-    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose six read-only tools through any MCP client, with a local model or one in the cloud." width="900">
+    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose eight read-only tools through any MCP client, with a local model or one in the cloud." width="900">
   </picture>
 </p>
 
@@ -94,24 +95,20 @@ The data can also go to an MQTT broker or a webhook of your own instead. Both ap
 
 ## Quick start
 
-You need Docker with Compose, and a phone that can reach this machine (the same network, or a VPN).
+You need Docker with Compose, or Podman, and a phone that can reach this machine (the same network, or a VPN).
 
 <a id="pair-the-app"></a>
 
-1. Download the compose file and the example settings from the latest release:
+1. Run the installer. It puts the release files in `./life-dashboard`, writes `.env` with a random secret and passwords, starts the stack and shows the pairing code:
 
    ```bash
-   mkdir life-dashboard && cd life-dashboard
-   curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
-   curl -fsSL -o .env https://github.com/owen282000/life-dashboard-stack/releases/latest/download/env.example
+   curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh
    ```
 
-2. In `.env`, set `WEBHOOK_SECRET` (`openssl rand -hex 32`), your time zone in `TZ`, the passwords `GRAFANA_PASSWORD` and `GRAFANA_DB_PASSWORD`, and in `PUBLIC_URL` the address your phone reaches this machine on. Then run `docker compose up -d`.
-3. Show the pairing code with `docker compose logs receiver`, or open `http://<address of this machine>:8080/pair` on your own network.
-4. In the app, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
-5. Open Grafana on port 3000 and log in as `admin` with your `GRAFANA_PASSWORD`. The overview is the home page.
+2. In the app, open the **Webhook** card on the **Health** tab, tap **Scan a pairing code** and scan the code in your terminal. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
+3. Open Grafana on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
 
-The [setup guide](docs/install.md) explains every setting, the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand), [several phones](docs/install.md#several-phones) and how to check that data arrives.
+Something wrong? The same line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).
 
 ## Try it without a phone
 
@@ -142,7 +139,7 @@ Days are local days in your time zone, a missing day is a gap rather than a zero
 
 ## Ask your own AI (MCP)
 
-[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The stack's optional MCP server gives the model you choose six read-only tools on your history: `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
+[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The stack's optional MCP server gives the model you choose eight read-only tools on your history: `list_phones`, `data_catalog`, `sync_status`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
 
 ```bash
 echo "MCP_TOKEN=$(openssl rand -hex 32)" >> .env

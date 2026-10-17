@@ -1,4 +1,7 @@
-"""The dash views: sleep rules, day placement in two time zones, measurements, workouts."""
+"""The dash views: sleep rules, day placement in two time zones, measurements, workouts,
+and the catalog of what is stored."""
+
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -223,3 +226,59 @@ def test_overlapping_workouts_of_one_source_both_stay(db):
         {"type": "79", "start_time": "2026-10-04T07:10:00Z", "end_time": "2026-10-04T07:20:00Z",
          "duration_seconds": 600, "uuid": "b", "source": "watch"}]))
     assert query(db, "SELECT count(*) FROM dash.workouts") == [(2,)]
+
+
+# ------------------------------------------------------------------ data catalog
+
+def ago(days: float) -> str:
+    """An ISO timestamp the given number of days before now."""
+    return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_data_sources_and_types_count_records_and_windows(make_db):
+    db = make_db("America/Los_Angeles")
+    post(db, envelope(1, heart_rate=[
+        {"bpm": 60, "time": "2026-10-01T08:00:00Z", "uuid": "h#1", "source": "watch"},
+        {"bpm": 61, "time": "2026-10-02T08:00:00Z", "uuid": "h#2", "source": "watch"},
+        {"bucket_start": "2026-10-03T08:00:00Z", "bucket_end": "2026-10-03T08:01:00Z",
+         "sample_count": 5, "avg": 70.0, "sources": ["strap", "watch"]},
+        {"bucket_start": "2026-10-03T08:01:00Z", "bucket_end": "2026-10-03T08:02:00Z",
+         "sample_count": 5, "avg": 71.0}],
+        daily_totals=[{"date": "2026-10-02", "steps": 10}]))
+    rows = query(db, "SELECT type, source_app, records, windows, first_time AT TIME ZONE 'UTC',"
+                     " last_time AT TIME ZONE 'UTC' FROM dash.data_sources ORDER BY type, source_app NULLS FIRST")
+    t = datetime
+    assert rows == [
+        # A day record sits at local midnight of its date, here 07:00 UTC.
+        ("daily_totals", None, 1, 0, t(2026, 10, 2, 7), t(2026, 10, 2, 7)),
+        ("heart_rate", None, 0, 1, t(2026, 10, 3, 8, 1), t(2026, 10, 3, 8, 1)),
+        ("heart_rate", "strap", 0, 1, t(2026, 10, 3, 8), t(2026, 10, 3, 8)),
+        ("heart_rate", "watch", 2, 1, t(2026, 10, 1, 8), t(2026, 10, 3, 8)),
+    ]
+    rows = query(db, "SELECT type, payload_source, records, windows, sources, first_day::text, last_day::text,"
+                     " active_days, usual_gap_days, quiet FROM dash.data_types ORDER BY type")
+    assert rows == [
+        ("daily_totals", "health_connect", 1, 0, [], "2026-10-02", "2026-10-02", 1, 1.0, None),
+        # The window with two sources counts once; every day from the 1st to the 3rd has data.
+        ("heart_rate", "health_connect", 2, 2, ["strap", "watch"], "2026-10-01", "2026-10-03", 3, 1.0, True),
+    ]
+
+
+def test_data_types_cadence_and_quiet(db):
+    post(db, envelope(
+        1,
+        # Weekly weighings, the newest 3 days ago: four of them in the 28 days up to it.
+        weight=[{"kilograms": 80.0, "time": ago(3 + 7 * n), "uuid": f"w{n}"} for n in range(5)],
+        # Daily heart rate for 10 days that stopped 4 days ago: twice the usual gap is 2 days.
+        heart_rate=[{"bpm": 60, "time": ago(4 + n), "uuid": f"h#{n}", "source": "watch"} for n in range(10)],
+        # Daily up to a few hours ago.
+        resting_heart_rate=[{"bpm": 55, "time": ago(0.1 + n), "uuid": f"r{n}"} for n in range(5)],
+        # One reading: no cadence to compare with.
+        vo2_max=[{"vo2_ml_per_min_per_kg": 45.0, "time": ago(40), "uuid": "v"}]))
+    rows = {r[0]: r[1:] for r in query(
+        db, "SELECT type, active_days, round(usual_gap_days::numeric, 2)::float8, round(days_since::numeric)::int,"
+            " quiet FROM dash.data_types")}
+    assert rows["weight"] == (4, 7.0, 3, False)
+    assert rows["heart_rate"] == (10, 1.0, 4, True)
+    assert rows["resting_heart_rate"] == (5, 1.0, 0, False)
+    assert rows["vo2_max"] == (1, 1.0, 40, None)

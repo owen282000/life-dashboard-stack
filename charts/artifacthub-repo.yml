@@ -1,0 +1,13 @@
+# Artifact Hub's metadata for the chart repository oci://ghcr.io/owen282000/charts/life-dashboard.
+# Artifact Hub reads it from the tag artifacthub.io of that repository, not from here: the
+# release workflow pushes it there with each chart (docs/releasing.md). With the ID below,
+# Artifact Hub shows the chart as from a verified publisher the next time it processes the
+# repository.
+
+# The ID on the repository's card in the Artifact Hub control panel.
+repositoryID: 99dddc4f-54eb-4b49-acab-2f58750b1ea9
+
+# Who may claim the repository on Artifact Hub; the email is the Artifact Hub sign-in.
+owners:
+  - name: owen282000
+    email: owenvogelaar@hotmail.com

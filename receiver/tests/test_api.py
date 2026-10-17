@@ -4,7 +4,7 @@ import json
 import threading
 import urllib.error
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer
 
 import psycopg
@@ -184,7 +184,8 @@ def test_series(base):
 
 def test_trend_compares_two_periods(make_db, make_api):
     dsn = make_db("UTC")
-    today = date.today()
+    # The stack's today, in its TZ; the machine's own date differs around midnight.
+    today = datetime.now(timezone.utc).date()
     totals = [{"date": (today - timedelta(days=n)).isoformat(), "steps": 1000 if n > 7 else 2000}
               for n in range(0, 15)]
     post(dsn, envelope(1, daily_totals=totals))
@@ -196,6 +197,103 @@ def test_trend_compares_two_periods(make_db, make_api):
     assert t["period"]["to"] == (today - timedelta(days=1)).isoformat()
     assert t["period"]["mean"] == 2000.0 and t["previous"]["mean"] == 1000.0
     assert (t["change"], t["change_pct"]) == (1000.0, 100.0)
+
+
+def test_catalog_maps_stored_types_to_what_reads_them(base):
+    status, body, _ = get(base, "/api/catalog")
+    assert status == 200 and body["timezone"] == "Europe/Amsterdam" and body["truncated"] is False
+    phones = {p["phone"]: p for p in body["phones"]}
+    assert set(phones) == {"phone", "other"}
+    phone = phones["phone"]
+    assert phone["platforms"] == ["Android", "Screen time"]
+    types = {t["type"]: t for t in phone["types"]}
+    assert set(types) == {"daily_totals", "exercise", "resting_heart_rate", "screen_time", "sleep", "weight"}
+    assert types["exercise"] == {"type": "exercise", "payload_source": "health_connect", "records": 1, "windows": 0,
+                                 "sources": ["watch"], "first_day": "2026-10-03", "last_day": "2026-10-03",
+                                 "read": True}
+    assert types["screen_time"]["payload_source"] == "screen_time" and types["screen_time"]["sources"] == []
+    reads = phone["reads"]
+    assert reads["days"] == list(queries.DAY_FIELDS)
+    assert reads["sleep"] == ["2026-10-04", "2026-10-04"] and reads["workouts"] == ["2026-10-03", "2026-10-03"]
+    assert reads["screen_time"] == ["2026-10-04", "2026-10-04"]
+    assert reads["metrics"]["steps"] == ["2026-10-03", "2026-10-04"]
+    assert {"weight", "resting_heart_rate", "sleep_h", "exercise_min", "screen_min"} <= set(reads["metrics"])
+    assert not {"heart_rate", "sleep_hr_low", "hrv_rmssd", "hrv_sdnn"} & set(reads["metrics"])
+    other = phones["other"]
+    assert other["reads"]["days"] == ["steps", "distance_km", "active_kcal", "total_kcal"]
+    assert other["reads"]["sleep"] is None and other["reads"]["screen_time"] is None
+    _, body, _ = get(base, "/api/catalog?phone=other")
+    assert [p["phone"] for p in body["phones"]] == ["other"] and body["phone"] == "other"
+
+
+def test_catalog_knows_every_metric_and_day_field(base):
+    assert set(queries.METRIC_TYPES) == set(queries.METRICS)
+    _, body, _ = get(base, "/api/days?from=2026-10-04&to=2026-10-04&phone=phone")
+    assert set(body["rows"][0]) - {"day", "phone", "complete"} == set(queries.DAY_FIELDS)
+
+
+def test_catalog_keeps_hrv_measures_apart_and_flags_unread_types(make_db, make_api):
+    dsn = make_db("UTC")
+    post(dsn, envelope(1, source="healthkit_ios",
+                       heart_rate_variability=[{"heart_rate_variability_millis": 50.0, "time": "2026-10-04T03:00:00Z",
+                                                "uuid": "v1", "source": "Apple Watch"}],
+                       nutrition=[{"calories": 400.0, "start_time": "2026-10-04T08:00:00Z",
+                                   "end_time": "2026-10-04T08:10:00Z", "uuid": "n1", "source": "MyFitnessPal"}]))
+    post(dsn, envelope(2, heart_rate=[{"bucket_start": "2026-10-04T08:00:00Z", "bucket_end": "2026-10-04T08:01:00Z",
+                                       "sample_count": 3, "avg": 70.0, "sources": ["strap"]}],
+                       respiratory_rate=[{"bucket_start": "2026-10-04T08:00:00Z", "bucket_end": "2026-10-04T08:01:00Z",
+                                          "sample_count": 3, "avg": 14.0}]), install="android")
+    base = make_api(dsn)
+    _, body, _ = get(base, "/api/catalog")
+    phones = {p["phone"]: p for p in body["phones"]}
+    iphone = phones["phone"]
+    assert set(iphone["reads"]["metrics"]) == {"hrv_sdnn"}
+    assert {t["type"]: t["read"] for t in iphone["types"]} == {"heart_rate_variability": True, "nutrition": False}
+    android = phones["android"]
+    # Heart rate windows are read; the views read no windows of any other type.
+    assert set(android["reads"]["metrics"]) == {"heart_rate"}
+    assert {t["type"]: (t["windows"], t["read"]) for t in android["types"]} == \
+        {"heart_rate": (1, True), "respiratory_rate": (1, False)}
+
+
+def test_sync_shows_quiet_types_and_sources(make_db, make_api):
+    dsn = make_db("UTC")
+    now = datetime.now(timezone.utc)
+
+    def at(days):
+        return (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    post(dsn, envelope(1, ts=at(0), heart_rate=(
+        [{"bpm": 60, "time": at(0.05 + n), "uuid": f"w#{n}", "source": "watch"} for n in range(28)]
+        # A strap that stopped 5 days ago, and an old one that stopped long before.
+        + [{"bpm": 60, "time": at(5 + n), "uuid": f"s#{n}", "source": "strap"} for n in range(10)]
+        + [{"bpm": 60, "time": at(90), "uuid": "o#1", "source": "old"}]),
+        # Daily sleep that stopped 6 days ago.
+        sleep=[{"session_end_time": at(6 + n), "duration_seconds": 25000, "stages": [], "uuid": f"n{n}",
+                "source": "watch"} for n in range(10)]))
+    base = make_api(dsn)
+    status, body, _ = get(base, "/api/sync?phone=phone")
+    assert status == 200 and body["phone"] == "phone"
+    (phone,) = body["phones"]
+    assert phone["hours_since"] < 1 and phone["quiet"] == ["sleep"]
+    (source,) = phone["payload_sources"]
+    assert source["platform"] == "Android" and source["payloads_24h"] == 1 and source["app_version"] == "1.23.0"
+    types = {t["type"]: t for t in phone["types"]}
+    assert types["heart_rate"]["quiet"] is False and types["heart_rate"]["active_days"] == 28
+    assert types["sleep"]["quiet"] is True and types["sleep"]["usual_gap_days"] == 1.0
+    assert types["sleep"]["days_since"] == 6.0
+    sources = {(s["type"], s["source_app"]): s for s in phone["sources"]}
+    assert sources[("heart_rate", "watch")]["quiet"] is False
+    assert sources[("heart_rate", "strap")]["quiet"] is True and sources[("heart_rate", "strap")]["records"] == 10
+    assert sources[("heart_rate", "old")]["quiet"] is False
+    assert sources[("sleep", "watch")]["quiet"] is True
+
+
+def test_catalog_and_sync_cap_their_rows(base, monkeypatch):
+    monkeypatch.setattr(api, "ROW_CAP", 2)
+    for path in ("/api/catalog", "/api/sync"):
+        _, body, _ = get(base, path)
+        assert body["truncated"] is True
+        assert sum(len(p["types"]) for p in body["phones"]) == 2
 
 
 # ------------------------------------------------------------------ input checks
@@ -218,6 +316,10 @@ def test_trend_compares_two_periods(make_db, make_api):
     ("/api/trend?metric=steps&days=x", 400),
     ("/api/screen-time?date=2026-10", 400),
     ("/api/phones?x=1", 400),
+    ("/api/catalog?phone=nobody", 404),
+    ("/api/catalog?from=2026-10-01", 400),
+    ("/api/sync?phone=Bad%20Label", 400),
+    ("/api/sync?phone=nobody", 404),
 ])
 def test_bad_input(base, path, status):
     got, body, _ = get(base, path)
@@ -291,6 +393,17 @@ def test_writes_through_the_api_connection_fail(db):
                 conn.execute(f"SELECT * FROM {table} LIMIT 1")
     with psycopg.connect(db) as owner:
         assert owner.execute("SELECT count(*) FROM records").fetchone()[0] > 0
+
+
+def test_dash_ro_reads_the_catalog_views_but_not_what_they_read(db):
+    seed(db)
+    with queries.open_reader(api.dsn(db)) as reader:
+        conn = reader.conn
+        assert conn.execute("SELECT sum(records) AS n FROM dash.data_types").fetchone()["n"] == 8
+        assert conn.execute("SELECT count(*) AS n FROM dash.data_sources").fetchone()["n"] == 7
+        for table in ["records", "buckets", "payloads"]:
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                conn.execute(f"SELECT count(*) FROM {table}")
 
 
 def test_grants_survive_a_view_rebuild(db):

@@ -32,7 +32,7 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 ## The read-only API and `dash_ro`
 
-- With `API_TOKEN` set, the receiver answers `GET` requests under `/api/` on its own port: `/api/phones`, `/api/days`, `/api/sleep`, `/api/workouts`, `/api/screen-time`, `/api/series` and `/api/trend`, with the parameters, fields, metric names and units in [api.md](api.md). Fields and metrics may be added; none are renamed, removed or given another unit. Without a token every `/api/` path is a 404.
+- With `API_TOKEN` set, the receiver answers `GET` requests under `/api/` on its own port: `/api/phones`, `/api/days`, `/api/sleep`, `/api/workouts`, `/api/screen-time`, `/api/series`, `/api/trend`, and from 1.1 `/api/catalog` and `/api/sync`, with the parameters, fields, metric names and units in [api.md](api.md). Fields and metrics may be added; none are renamed, removed or given another unit. Without a token every `/api/` path is a 404.
 - `Authorization: Bearer <API_TOKEN>`, a 401 without it, a 400 for bad input, a 404 for an unknown phone, and the limits of 400 days per range and 5,000 rows per answer. A limit may be raised, never lowered.
 - The role `dash_ro`, with its password from `DASH_DB_PASSWORD`: `USAGE` on `dash`, `SELECT` on every view in it, and nothing else, with read-only transactions and a 15-second statement timeout.
 
@@ -40,18 +40,18 @@ Every view, column, type and unit in [views.md](views.md), and the helper functi
 
 - The image `ghcr.io/owen282000/life-dashboard-mcp` and the Compose service `mcp` in the profile `mcp`, listening on 8090 inside its container and as the default of `MCP_PORT`.
 - Streamable HTTP at `/mcp` with `Authorization: Bearer <MCP_TOKEN>`, `GET /health` without it, and stdio with `python server.py --stdio`.
-- The tools `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`, with the parameters and result fields in [mcp.md](mcp.md). Tools, parameters with a default, and fields may be added; none are renamed or removed. Every tool stays read-only.
+- The tools `list_phones`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`, and from 1.1 `data_catalog` and `sync_status`, with the parameters and result fields in [mcp.md](mcp.md). Tools, parameters with a default, and fields may be added; none are renamed or removed. Every tool stays read-only.
 
 ## The environment variables
 
-The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN`, `DASH_DB_PASSWORD`, `MCP_TOKEN` and `MCP_PORT`, and from 1.1 the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. From 1.3, `python pairing.py [label]` in the receiver image prints the pairing block on demand, from `PUBLIC_URL` and `WEBHOOK_SECRET`. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
+The settings in [.env.example](../.env.example) keep their names, meaning and defaults: `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `GRAFANA_PASSWORD`, `RECEIVER_PORT`, `GRAFANA_PORT`, `LIFEDASH_VERSION`, `IGNORE_OLD_VOLUME`, `API_TOKEN`, `DASH_DB_PASSWORD`, `MCP_TOKEN` and `MCP_PORT`, and the pairing settings `PUBLIC_URL`, `PAIRING_LOG`, `PAIRING_PAGE` and `PAIRING_TOKEN`. The pairing code keeps the apps' link format (`v=1` with `url`, `secret` and `name`), and `/pair` stays limited to your own network or the token. `python pairing.py [label]` in the receiver image prints the pairing block on demand, from `PUBLIC_URL` and `WEBHOOK_SECRET`. The receiver's own settings (`DATABASE_URL`, `WEBHOOK_SECRET`, `TZ`, `GRAFANA_DB_PASSWORD`, `PORT`) stay the same too. New settings come with a default, so an older `.env` keeps working.
 
 ## The ports, services and volumes
 
 - The receiver listens on 8080 and Grafana on 3000, inside their containers and as the defaults of `RECEIVER_PORT` and `GRAFANA_PORT`. Postgres isn't published.
 - The Compose services `db`, `receiver` and `grafana`, `mcp` in the profile `mcp`, and the volumes `pgdata` (Postgres), `grafana-data` (Grafana) and `db-data` (the old Postgres 16 volume). Renaming a volume would leave your data behind, so that never happens within a major version.
 - The images `ghcr.io/owen282000/life-dashboard-receiver`, `-grafana`, `-db` and `-mcp`, tagged `1.2.3`, `1.2`, `1` and `latest`. `LIFEDASH_VERSION=1` follows every 1.x release. The receiver and MCP images run as user and group 65534, Grafana's as 472 and the db image's Postgres as 70.
-- The chart at `oci://ghcr.io/owen282000/charts/life-dashboard`, published with every release from 1.3.0 on, under the same version as the images.
+- The chart at `oci://ghcr.io/owen282000/charts/life-dashboard`, published with every release from 1.0.0 on, under the same version as the images.
 
 ## The Helm chart
 
@@ -70,6 +70,12 @@ The chart `life-dashboard` has no version of its own: its `version` and `appVers
 - An uninstall keeps the database, Grafana's volume and the generated Secrets unless you switch that off.
 
 Values may be added, with a default that keeps the chart doing what it did. A minor version may raise the default of `postgres.cnpg.imageName` within Postgres 18 and the CloudNativePG version the chart is tested with.
+
+## The installer and the doctor
+
+- From 1.1, every release has `install.sh` attached, and `releases/latest/download/install.sh` is the latest. It installs the release it's attached to. Its commands (`install`, `doctor`), its options, the environment variables it reads (`LIFEDASH_DIR`, `LIFEDASH_ENGINE`, `LIFEDASH_YES`, `LIFEDASH_WITH_API`, `LIFEDASH_WITH_MCP`, `LIFEDASH_PULL`, `LIFEDASH_TIMEOUT`, `LIFEDASH_LABEL`, `LIFEDASH_TZ`, `LIFEDASH_DOWNLOAD`) and its exit codes (0 done, 1 failed, 2 wrong usage, 3 a prerequisite missing, 4 not healthy in time) keep their meaning. It never overwrites an existing `.env`, and `--env-only` writes only a `.env`. Options may be added.
+- `python doctor.py` in the receiver image, with `--quiet-hours`, `--mcp-url` and `--json`, exits with 1 when a check failed and 0 otherwise. The checks and their wording may change in a minor version, like log messages.
+- Docker Compose v2 from 2.20, and Podman from 4.7 with podman-compose from 1.5 or Docker Compose as its provider, stay supported for all of 1.x.
 
 ## What can change in a minor version
 

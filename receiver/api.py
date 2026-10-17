@@ -136,6 +136,20 @@ def get_trend(reader, params):
             "phones": reader.trend(metric, int(raw), phone)}
 
 
+def get_catalog(reader, params):
+    phone = reader.require_phone(params.get("phone"))
+    phones, truncated = reader.catalog(phone, ROW_CAP)
+    return {"timezone": reader.tz, "today": reader.today().isoformat(), "phone": phone,
+            "phones": phones, "truncated": truncated}
+
+
+def get_sync(reader, params):
+    phone = reader.require_phone(params.get("phone"))
+    phones, truncated = reader.sync(phone, ROW_CAP)
+    return {"timezone": reader.tz, "today": reader.today().isoformat(), "phone": phone,
+            "phones": phones, "truncated": truncated}
+
+
 ROUTES = {
     "/api/phones": (get_phones, set()),
     "/api/days": (get_days, {"from", "to", "phone"}),
@@ -144,6 +158,8 @@ ROUTES = {
     "/api/screen-time": (get_screen_time, {"date", "phone"}),
     "/api/series": (get_series, {"metric", "from", "to", "phone"}),
     "/api/trend": (get_trend, {"metric", "days", "phone"}),
+    "/api/catalog": (get_catalog, {"phone"}),
+    "/api/sync": (get_sync, {"phone"}),
 }
 
 UNAUTHORIZED_HEADERS = {"WWW-Authenticate": 'Bearer realm="life-dashboard"'}

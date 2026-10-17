@@ -7,7 +7,7 @@ from conftest import REPO_DIR, query
 CONTRACT_VIEWS = [
     "installs", "activity_days", "steps_hourly", "steps_raw_days", "heart_rate", "heart_rate_hourly",
     "heart_days", "measurements", "measurement_days", "weight_days", "sleep_nights", "sleep_stages",
-    "workouts", "screen_days", "screen_apps", "type_summary", "records_days",
+    "workouts", "screen_days", "screen_apps", "type_summary", "records_days", "data_sources", "data_types",
 ]
 
 
@@ -44,6 +44,8 @@ def test_no_long_dashes_in_shipped_text():
                  *(REPO_DIR / ".github" / "workflows").glob("*.yml"),
                  *REPO_DIR.glob("*/Dockerfile"),
                  REPO_DIR / "receiver" / "api.py", REPO_DIR / "receiver" / "queries.py",
+                 REPO_DIR / "receiver" / "doctor.py", REPO_DIR / "receiver" / "tests" / "test_doctor.py",
+                 REPO_DIR / "install.sh", *(REPO_DIR / ".github" / "scripts").glob("*.sh"),
                  REPO_DIR / "receiver" / "roles.py", REPO_DIR / "receiver" / "tests" / "test_roles.py",
                  REPO_DIR / "receiver" / "tests" / "test_lifecycle.py",
                  REPO_DIR / "docs" / "api.md", REPO_DIR / "docs" / "mcp.md",
@@ -64,3 +66,10 @@ def test_api_md_lists_every_endpoint_and_metric():
         assert re.search(rf"^### `GET {re.escape(route)}`", text, re.M), f"{route} is not in docs/api.md"
     for metric in queries.METRICS:
         assert f"| `{metric}` |" in text, f"metric {metric} is not in docs/api.md"
+
+
+def test_install_sh_carries_the_version_of_the_compose_file():
+    """scripts/prepare-release.sh moves both; the installer fetches the files of its own version."""
+    install = re.search(r"^VERSION=(\S+)$", (REPO_DIR / "install.sh").read_text(), re.M)
+    compose = re.search(r"LIFEDASH_VERSION:-([0-9.]+)\}", (REPO_DIR / "docker-compose.yml").read_text())
+    assert install and compose and install.group(1) == compose.group(1)

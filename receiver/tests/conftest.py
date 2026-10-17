@@ -67,7 +67,7 @@ def server_url():
                 time.sleep(0.5)
         yield url
     finally:
-        subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+        subprocess.run(["docker", "rm", "-f", "-v", name], capture_output=True)
 
 
 def _dsn_for(server: str, dbname: str) -> str:

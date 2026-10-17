@@ -1,13 +1,13 @@
 # Read-only API
 
-The receiver can answer questions as well as take payloads. With `API_TOKEN` set, it serves a small read-only JSON API under `/api/` on its own port: the phones, totals per day, nights, workouts, screen time, one metric as a series, and a trend. It's meant for a script, a home automation, a spreadsheet or a widget of your own. The [MCP server](mcp.md) uses the same queries for a model.
+The receiver can answer questions as well as take payloads. With `API_TOKEN` set, it serves a small read-only JSON API under `/api/` on its own port: the phones, totals per day, nights, workouts, screen time, one metric as a series, a trend, what each phone has stored, and when each kind of data last arrived. It's meant for a script, a home automation, a spreadsheet or a widget of your own. The [MCP server](mcp.md) uses the same queries for a model.
 
 ## Contents
 
 - [Switch it on](#switch-it-on)
 - [How it reads](#how-it-reads)
 - [Conventions](#conventions)
-- [Endpoints](#endpoints): [`/api/phones`](#get-apiphones), [`/api/days`](#get-apidays), [`/api/sleep`](#get-apisleep), [`/api/workouts`](#get-apiworkouts), [`/api/screen-time`](#get-apiscreen-time), [`/api/series`](#get-apiseries), [`/api/trend`](#get-apitrend)
+- [Endpoints](#endpoints): [`/api/phones`](#get-apiphones), [`/api/days`](#get-apidays), [`/api/sleep`](#get-apisleep), [`/api/workouts`](#get-apiworkouts), [`/api/screen-time`](#get-apiscreen-time), [`/api/series`](#get-apiseries), [`/api/trend`](#get-apitrend), [`/api/catalog`](#get-apicatalog), [`/api/sync`](#get-apisync)
 - [Metrics](#metrics)
 - [Errors](#errors)
 - [Limits](#limits)
@@ -228,6 +228,103 @@ curl -H "Authorization: Bearer $API_TOKEN" \
 }
 ```
 
+### `GET /api/catalog`
+
+Parameters: `phone`. What each phone has stored, from [`dash.data_types`](views.md#dashdata_types), and what the other endpoints can answer from it. Per phone:
+
+- `platforms`, as in `/api/phones`.
+- `types`: one entry per type of data (the payload key) and payload source, with its `records`, its `windows` (series the phone sends per time window), the apps that wrote it (`sources`), its `first_day` and `last_day`, and `read`: false when no endpoint reads it. The dashboards still show it.
+- `reads`: what has data. `days` lists the fields of `/api/days` that have a source; `sleep`, `workouts` and `screen_time` are the first and last day of `/api/sleep`, `/api/workouts` and `/api/screen-time`, or `null`; `metrics` gives every [metric](#metrics) with data and its first and last day.
+
+A metric has data when the payload key it reads is stored as records. Windows count only for heart rate, the one series the views read per window. HRV counts only from the platform that measures it that way: `hrv_rmssd` from Android, `hrv_sdnn` from an iPhone. A metric that reads two keys (`sleep_hr_low`, sleep and heart rate) has the days both cover.
+
+```bash
+curl -H "Authorization: Bearer $API_TOKEN" "http://localhost:8080/api/catalog?phone=demo-android"
+```
+
+```json
+{
+  "timezone": "Europe/Amsterdam", "today": "2026-10-17", "phone": "demo-android",
+  "phones": [
+    {"phone": "demo-android", "platforms": ["Android", "Screen time"],
+     "types": [
+       {"type": "daily_totals", "payload_source": "health_connect", "records": 59, "windows": 0, "sources": [],
+        "first_day": "2026-08-19", "last_day": "2026-10-16", "read": true},
+       {"type": "heart_rate", "payload_source": "health_connect", "records": 17009, "windows": 0,
+        "sources": ["com.garmin.android.apps.connectmobile"], "first_day": "2026-08-19", "last_day": "2026-10-17",
+        "read": true},
+       {"type": "skin_temperature", "payload_source": "health_connect", "records": 236, "windows": 0,
+        "sources": ["com.garmin.android.apps.connectmobile"], "first_day": "2026-08-19", "last_day": "2026-10-16",
+        "read": false}
+     ],
+     "reads": {
+       "days": ["steps", "distance_km", "active_kcal", "total_kcal", "sleep_h", "in_bed_h", "exercise_min",
+                "workouts", "screen_min", "resting_hr", "weight_kg"],
+       "sleep": ["2026-08-19", "2026-10-16"], "workouts": ["2026-08-20", "2026-10-15"],
+       "screen_time": ["2026-08-13", "2026-10-17"],
+       "metrics": {"steps": ["2026-08-19", "2026-10-16"], "hrv_rmssd": ["2026-08-19", "2026-10-16"],
+                   "vo2_max": ["2026-08-23", "2026-10-11"], "screen_min": ["2026-08-13", "2026-10-17"]}
+     }}
+  ],
+  "truncated": false
+}
+```
+
+(The example shows three of the 15 types and four of the 21 metrics.)
+
+### `GET /api/sync`
+
+Parameters: `phone`. When each phone last sent data and when each type of data last arrived, from `dash.installs`, [`dash.data_types`](views.md#dashdata_types) and [`dash.data_sources`](views.md#dashdata_sources). Per phone:
+
+- `last_received` and `hours_since`: the newest payload with data, from any platform.
+- `payload_sources`: per platform (`Android`, `iPhone`, `Screen time`) the `app_version`, `last_received`, `hours_since`, `payloads_24h` and `last_sequence`, as in `dash.installs`.
+- `types`: per type, `last_time` (the newest record), `last_day`, `last_received` (when the receiver last stored any of it), `days_since`, `active_days`, `usual_gap_days` and `quiet`, as in `dash.data_types`.
+- `sources`: per type and writing app (`source_app`), its `records`, `windows`, `last_time`, `last_received`, `days_since` and `quiet`.
+- `quiet`: the types that went quiet.
+
+A type is quiet when its newest record is more than twice its usual gap old: the usual gap is 28 days (fewer for a type that started later) divided by the days with data in the 28 days up to its newest record. A daily type is quiet after 2 days without a record, a weekly one after 14; `quiet` is `null` for a type with data on one day only. An app is quiet by the same rule, when it wrote the type in those 28 days: a watch that stopped sending heart rate while the phone still does.
+
+```bash
+curl -H "Authorization: Bearer $API_TOKEN" "http://localhost:8080/api/sync?phone=demo-android"
+```
+
+```json
+{
+  "timezone": "Europe/Amsterdam", "today": "2026-10-17", "phone": "demo-android",
+  "phones": [
+    {"phone": "demo-android", "last_received": "2026-10-17T01:23:20.402783+02:00", "hours_since": 0.01,
+     "payload_sources": [
+       {"payload_source": "health_connect", "platform": "Android", "app_version": "1.23.0",
+        "last_received": "2026-10-17T01:23:19.305105+02:00", "hours_since": 0.01, "payloads_24h": 22,
+        "last_sequence": 41022},
+       {"payload_source": "screen_time", "platform": "Screen time", "app_version": "1.23.0",
+        "last_received": "2026-10-17T01:23:20.402783+02:00", "hours_since": 0.01, "payloads_24h": 60,
+        "last_sequence": 41082}
+     ],
+     "quiet": [],
+     "types": [
+       {"type": "vo2_max", "payload_source": "health_connect", "last_day": "2026-10-11",
+        "last_time": "2026-10-11T10:00:00+02:00", "last_received": "2026-10-17T01:23:19.132775+02:00",
+        "days_since": 5.64, "active_days": 4, "usual_gap_days": 7.0, "quiet": false},
+       {"type": "weight", "payload_source": "health_connect", "last_day": "2026-10-16",
+        "last_time": "2026-10-16T07:55:00+02:00", "last_received": "2026-10-17T01:23:19.253695+02:00",
+        "days_since": 0.73, "active_days": 16, "usual_gap_days": 1.75, "quiet": false}
+     ],
+     "sources": [
+       {"type": "steps", "source_app": "com.garmin.android.apps.connectmobile", "records": 944, "windows": 0,
+        "last_time": "2026-10-16T23:00:00+02:00", "last_received": "2026-10-17T01:23:19.253695+02:00",
+        "days_since": 0.1, "quiet": false},
+       {"type": "steps", "source_app": "com.google.android.apps.fitness", "records": 118, "windows": 0,
+        "last_time": "2026-10-16T18:00:00+02:00", "last_received": "2026-10-17T01:23:19.253695+02:00",
+        "days_since": 0.31, "quiet": false}
+     ]}
+  ],
+  "truncated": false
+}
+```
+
+(The example shows two of the 15 types and two of the 16 pairs of type and app.)
+
 ## Metrics
 
 `/api/series` and `/api/trend` take one of these. Each is one value per phone and local day.
@@ -278,7 +375,7 @@ Errors are JSON with one `error` field.
 ## Limits
 
 - A range is at most 400 days.
-- A response has at most 5,000 rows. When there were more, `truncated` is `true`: ask for a shorter range or one phone.
+- A response has at most 5,000 rows. When there were more, `truncated` is `true`: ask for a shorter range or one phone. In `/api/catalog` and `/api/sync` the rows are the types, and the writing apps.
 - `/api/screen-time` lists the top 50 apps per phone.
 - A query stops after 15 seconds, set on the `dash_ro` role and on the connection.
 

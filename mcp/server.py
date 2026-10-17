@@ -1,7 +1,8 @@
 """Read-only MCP server for the Life Dashboard stack.
 
-Six tools let a model read the history the stack keeps: the phones, totals per day,
-nights, workouts, a trend for one metric, and screen time. They read the dash views
+Eight tools let a model read the history the stack keeps: the phones, what data each one
+has and which tools can answer from it, when each kind of data last arrived, totals per
+day, nights, workouts, a trend for one metric, and screen time. They read the dash views
 through queries.py, the same module the receiver's /api/ uses, as dash_ro: a database
 user that can only SELECT from the dash schema. There is no tool that writes and no tool
 that takes SQL.
@@ -40,20 +41,30 @@ MAX_DAYS = 92          # range of daily_summary, sleep_nights and workouts
 MAX_ROWS = 200         # rows in one result
 MAX_WORKOUTS = 100
 TOP_APPS = 10
+MAX_TYPES = 200        # type and source rows in data_catalog and sync_status
+
+# What each tool reads, named the way queries.Reader.catalog names it.
+TOOL_READS = {"daily_summary": "days", "sleep_nights": "sleep", "workouts": "workouts",
+              "screen_time": "screen_time", "trend": "metrics"}
 
 INSTRUCTIONS = """\
 Read-only access to one household's health and screen time history from Life Dashboard: \
 Health Connect or Apple Health data and Android screen time, sent by their phones to a \
 server they run. Start with list_phones: it gives the phone labels, the time zone, today's \
-date and the first and last day with data. Days are local days in that time zone; a night \
+date and the first and last day with data. data_catalog says which data each phone has and \
+which tools and trend metrics can answer from it; sync_status says when each kind of data \
+last arrived and what went quiet. Days are local days in that time zone; a night \
 belongs to the date the person woke up; today is a running total and is marked \
 complete=false. null or a missing day means nothing was recorded, not zero. HRV from \
 Android (RMSSD) and from an iPhone (SDNN) are different measures and must not be mixed. \
 You are reading personal health data: answer what was asked, and do not give medical \
 diagnoses."""
 
+# The stack's version; scripts/prepare-release.sh sets it with every release.
+VERSION = "1.0.1"
+
 server = MCPServer("life-dashboard", title="Life Dashboard (read-only)", instructions=INSTRUCTIONS,
-                   version="1.2.0")
+                   version=VERSION)
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True,
                             open_world_hint=False)
@@ -110,8 +121,8 @@ def _by_phone(rows: list[dict]) -> dict[str, list[dict]]:
     return out
 
 
-def _truncated(truncated: bool, shown: int) -> str:
-    return f" Only the first {shown} rows are shown; ask for a shorter range." if truncated else ""
+def _truncated(truncated: bool, shown: int, narrower: str = "a shorter range") -> str:
+    return f" Only the first {shown} rows are shown; ask for {narrower}." if truncated else ""
 
 
 # ------------------------------------------------------------------ tools
@@ -130,6 +141,90 @@ def list_phones() -> CallToolResult:
              for p in data["phones"]]
     return _result(f"{len(parts)} phone(s), time zone {data['timezone']}, today {data['today']}: "
                    + "; ".join(parts) + ".", data)
+
+
+@server.tool(annotations=READ_ONLY)
+def data_catalog(phone: Phone = None) -> CallToolResult:
+    """What each phone has stored and what the other tools can answer from it. Per phone:
+    every type of data (the payload key, such as heart_rate or sleep) with its records,
+    windows (series sent per time window), the apps that wrote it (sources), its first and
+    last local day, and read=false when no tool reads it (the dashboards still show it).
+    tools gives, per tool, what has data: the daily_summary fields, the day range of
+    sleep_nights, workouts and screen_time (null when there is none), and every trend metric
+    with its day range. Steps per day come from daily_totals, so raw steps records show
+    read=false. Call it before asking for a metric, to know whether and since when it
+    exists."""
+    def run(reader):
+        p = reader.require_phone(phone)
+        phones, truncated = reader.catalog(p, MAX_TYPES)
+        return {"timezone": reader.tz, "today": reader.today().isoformat(), "phone": p,
+                "phones": [_with_tools(entry) for entry in phones], "truncated": truncated}
+    data = _read(run)
+    if not data["phones"]:
+        return _result("No phone has sent data yet.", data)
+    lines = []
+    for p in data["phones"]:
+        tools = p["tools"]
+        if not p["types"]:
+            lines.append(f"{p['phone']}: nothing stored yet")
+            continue
+        unread = sorted({t["type"] for t in p["types"] if not t["read"]})
+        lists = [name for name in ("sleep_nights", "workouts", "screen_time") if tools[name]]
+        line = (f"{p['phone']}: {len(p['types'])} types; daily_summary {len(tools['daily_summary'])} of"
+                f" {len(queries.DAY_FIELDS)} fields; trend {len(tools['trend'])} of {len(queries.METRICS)} metrics")
+        if lists:
+            line += "; " + ", ".join(lists) + " have data"
+        if unread:
+            line += "; only on the dashboards: " + ", ".join(unread)
+        lines.append(line)
+    return _result("; ".join(lines) + "." + _truncated(data["truncated"], MAX_TYPES, "one phone"), data)
+
+
+def _with_tools(entry: dict) -> dict:
+    """A phone of queries.Reader.catalog, with its reads named after the tools."""
+    reads = entry["reads"]
+    return {"phone": entry["phone"], "platforms": entry["platforms"],
+            "tools": {tool: reads[key] for tool, key in TOOL_READS.items()}, "types": entry["types"]}
+
+
+@server.tool(annotations=READ_ONLY)
+def sync_status(phone: Phone = None) -> CallToolResult:
+    """When each phone last sent data and when each type of data last arrived. Per phone:
+    payload_sources (Android, iPhone or Screen time) with the last payload, hours since,
+    payloads in the last 24 hours and app version; types with last_time (the newest
+    record), last_received (when the receiver last stored any of it), days_since,
+    active_days (local days with data in the 28 days up to the newest record),
+    usual_gap_days (28, or fewer for a younger type, divided by active_days) and quiet;
+    sources: per type and writing app, its newest record and whether it went quiet. quiet
+    means the newest record is older than twice the usual gap; null when the type had data
+    on one day only. A source is quiet by the same rule when it wrote the type in those 28
+    days. quiet lists the quiet types."""
+    def run(reader):
+        p = reader.require_phone(phone)
+        phones, truncated = reader.sync(p, MAX_TYPES)
+        return {"timezone": reader.tz, "today": reader.today().isoformat(), "phone": p,
+                "phones": phones, "truncated": truncated}
+    data = _read(run)
+    if not data["phones"]:
+        return _result("No phone has sent data yet.", data)
+    lines = []
+    for p in data["phones"]:
+        if p["hours_since"] is None:
+            lines.append(f"{p['phone']}: no data received yet")
+            continue
+        sources = ", ".join(f"{s['platform']} {_num(s['hours_since'], 1)} h"
+                            for s in p["payload_sources"] if s["hours_since"] is not None)
+        line = f"{p['phone']}: last payload {_num(p['hours_since'], 1)} h ago ({sources})"
+        types = {t["type"]: t for t in p["types"]}
+        quiet = [f"{name} (newest {_num(types[name]['days_since'], 1)} days ago, usually every"
+                 f" {_num(types[name]['usual_gap_days'], 1)} days)" for name in p["quiet"]]
+        apps = [f"{s['source_app']} stopped writing {s['type']} {_num(s['days_since'], 1)} days ago"
+                for s in p["sources"] if s["quiet"] and s["type"] not in p["quiet"]]
+        line += "; quiet: " + "; ".join(quiet) if quiet else "; no type went quiet"
+        if apps:
+            line += "; " + "; ".join(apps)
+        lines.append(line)
+    return _result("; ".join(lines) + "." + _truncated(data["truncated"], MAX_TYPES, "one phone"), data)
 
 
 @server.tool(annotations=READ_ONLY)

@@ -1,4 +1,4 @@
-"""The MCP server: six read-only tools on the sample data, over the SDK's client, in
+"""The MCP server: eight read-only tools on the sample data, over the SDK's client, in
 process, over streamable HTTP with the bearer token, and over stdio."""
 
 import asyncio
@@ -11,20 +11,27 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from datetime import date, timedelta
+import uuid
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx2
+import psycopg
 import pytest
 import uvicorn
 from mcp import Client, StdioServerParameters
 from mcp.client.streamable_http import streamable_http_client
+from psycopg import sql
 
+import api
+import receiver
 import server
-from conftest import MCP_DIR, REPO_DIR
+from conftest import MCP_DIR, REPO_DIR, TZ, receiver_conftest
 
 TOKEN = "test-mcp-token-0123456789abcdef"
 PYTHONPATH = str(REPO_DIR / "receiver")  # queries.py; the image has it next to server.py
-TOOLS = {"list_phones", "daily_summary", "sleep_nights", "workouts", "trend", "screen_time"}
+TOOLS = {"list_phones", "data_catalog", "sync_status", "daily_summary", "sleep_nights", "workouts", "trend",
+         "screen_time"}
 
 
 def call(name, args=None, target=None):
@@ -43,14 +50,19 @@ def ok(result):
     return result.structured_content
 
 
+def stack_today():
+    # The demo data's today is in the stack's TZ; the machine's own date differs around midnight.
+    return datetime.now(ZoneInfo(TZ)).date()
+
+
 def last_days(n):
-    today = date.today()
+    today = stack_today()
     return (today - timedelta(days=n - 1)).isoformat(), today.isoformat()
 
 
 # ------------------------------------------------------------------ tools
 
-def test_six_read_only_tools_and_nothing_else():
+def test_eight_read_only_tools_and_nothing_else():
     async def run():
         async with Client(server.server) as client:
             return (await client.list_tools()).tools
@@ -102,7 +114,7 @@ def test_trend(sample_dsn):
     data = ok(result)
     assert [t["phone"] for t in data["phones"]] == ["demo-android", "demo-iphone"]
     t = data["phones"][0]
-    assert t["period"]["to"] == (date.today() - timedelta(days=1)).isoformat()
+    assert t["period"]["to"] == (stack_today() - timedelta(days=1)).isoformat()
     assert t["period"]["days_with_data"] == 7 and t["previous"]["days_with_data"] == 7
     assert t["change_pct"] is not None
     assert "% on the 7 days before" in result.content[0].text
@@ -111,7 +123,7 @@ def test_trend(sample_dsn):
 
 
 def test_screen_time(sample_dsn):
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    yesterday = (stack_today() - timedelta(days=1)).isoformat()
     result = call("screen_time", {"date": yesterday})
     data = ok(result)
     (entry,) = data["phones"]
@@ -121,7 +133,82 @@ def test_screen_time(sample_dsn):
     assert ok(result)["phones"] == [] and "Android phones only" in result.content[0].text
 
 
+def test_data_catalog(sample_dsn):
+    result = call("data_catalog")
+    data = ok(result)
+    phones = {p["phone"]: p for p in data["phones"]}
+    assert set(phones) == {"demo-android", "demo-iphone"} and data["truncated"] is False
+    android, iphone = phones["demo-android"], phones["demo-iphone"]
+    assert set(android["tools"]) == set(server.TOOL_READS)
+    assert android["tools"]["daily_summary"] == list(server.queries.DAY_FIELDS)
+    assert "screen_min" not in iphone["tools"]["daily_summary"] and iphone["tools"]["screen_time"] is None
+    assert android["tools"]["screen_time"][1] == stack_today().isoformat()
+    assert "hrv_rmssd" in android["tools"]["trend"] and "hrv_sdnn" not in android["tools"]["trend"]
+    assert "hrv_sdnn" in iphone["tools"]["trend"] and "hrv_rmssd" not in iphone["tools"]["trend"]
+    types = {t["type"]: t for t in android["types"]}
+    assert types["heart_rate"]["sources"] == ["com.garmin.android.apps.connectmobile"] and types["heart_rate"]["read"]
+    # Steps per day come from daily_totals; skin temperature is on the dashboards only.
+    assert not types["steps"]["read"] and not types["skin_temperature"]["read"]
+    assert types["steps"]["sources"] == ["com.garmin.android.apps.connectmobile", "com.google.android.apps.fitness"]
+    summary = result.content[0].text
+    assert summary.startswith("demo-android: 15 types; daily_summary 11 of 11 fields; trend 21 of 23 metrics")
+    assert "only on the dashboards: skin_temperature, steps" in summary
+    data = ok(call("data_catalog", {"phone": "demo-iphone"}))
+    assert [p["phone"] for p in data["phones"]] == ["demo-iphone"] and data["phone"] == "demo-iphone"
+
+
+def test_sync_status(sample_dsn):
+    result = call("sync_status", {"phone": "demo-android"})
+    data = ok(result)
+    (phone,) = data["phones"]
+    assert phone["hours_since"] < 24 and phone["quiet"] == []
+    assert [s["platform"] for s in phone["payload_sources"]] == ["Android", "Screen time"]
+    types = {t["type"]: t for t in phone["types"]}
+    assert types["heart_rate"]["active_days"] == 28 and types["heart_rate"]["usual_gap_days"] == 1.0
+    assert types["heart_rate"]["quiet"] is False and 5 <= types["vo2_max"]["usual_gap_days"] <= 7
+    assert all(s["quiet"] is not True for s in phone["sources"])
+    assert result.content[0].text.startswith("demo-android: last payload ")
+    assert "no type went quiet" in result.content[0].text
+
+
+@pytest.fixture
+def quiet_dsn(server_url, monkeypatch):
+    """A phone whose strap stopped sending heart rate 4 days ago and whose sleep stopped 5 days ago."""
+    name = f"t_mcp_{uuid.uuid4().hex[:10]}"
+    with psycopg.connect(server_url, autocommit=True) as conn:
+        conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    owner = server_url.rsplit("/", 1)[0] + "/" + name
+    receiver.setup_database(owner, "UTC", receiver_conftest.RO_PASSWORD)
+    now = datetime.now(timezone.utc)
+
+    def at(days):
+        return (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body = {"timestamp": at(0), "app_version": "1.23.0", "source": "health_connect", "sequence": 1,
+            "heart_rate": [{"bpm": 60, "time": at(0.1 + n), "uuid": f"w#{n}", "source": "watch"} for n in range(20)]
+            + [{"bpm": 60, "time": at(4 + n), "uuid": f"s#{n}", "source": "strap"} for n in range(10)],
+            "sleep": [{"session_end_time": at(5 + n), "duration_seconds": 25000, "stages": [], "uuid": f"n{n}",
+                       "source": "watch"} for n in range(10)]}
+    status, _ = receiver.ingest(owner, "pixel", json.dumps(body).encode())
+    assert status == 200
+    monkeypatch.setattr(server, "CONNINFO", api.dsn(owner))
+    yield
+    with psycopg.connect(server_url, autocommit=True) as conn:
+        conn.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name)))
+
+
+def test_sync_status_names_what_went_quiet(quiet_dsn):
+    result = call("sync_status")
+    data = ok(result)
+    (phone,) = data["phones"]
+    assert phone["quiet"] == ["sleep"]
+    summary = result.content[0].text
+    assert "quiet: sleep (newest 5.0 days ago, usually every 1.0 days)" in summary
+    assert "strap stopped writing heart_rate 4.0 days ago" in summary
+
+
 @pytest.mark.parametrize("name, args, message", [
+    ("data_catalog", {"phone": "nobody"}, "no phone"),
+    ("sync_status", {"phone": "Not A Label"}, "label"),
     ("daily_summary", {"from_date": "2026-02-30", "to_date": "2026-03-01"}, "not a valid date"),
     ("daily_summary", {"from_date": "2026-01-01", "to_date": "2026-06-01"}, "at most 92 days"),
     ("sleep_nights", {"from_date": "2026-03-02", "to_date": "2026-03-01"}, "on or before"),
@@ -205,6 +292,8 @@ def test_http_client_calls_every_tool(http_url):
             start, end = last_days(7)
             results = {
                 "list_phones": await client.call_tool("list_phones", {}),
+                "data_catalog": await client.call_tool("data_catalog", {}),
+                "sync_status": await client.call_tool("sync_status", {"phone": "demo-iphone"}),
                 "daily_summary": await client.call_tool("daily_summary", {"from_date": start, "to_date": end}),
                 "sleep_nights": await client.call_tool("sleep_nights", {"from_date": start, "to_date": end}),
                 "workouts": await client.call_tool("workouts", {"from_date": start, "to_date": end}),

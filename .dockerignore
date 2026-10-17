@@ -3,6 +3,7 @@
 *
 !receiver/receiver.py
 !receiver/pairing.py
+!receiver/doctor.py
 !receiver/api.py
 !receiver/queries.py
 !receiver/roles.py

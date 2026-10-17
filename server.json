@@ -1,0 +1,71 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.owen282000/life-dashboard",
+  "title": "Life Dashboard",
+  "description": "Read-only health and screen time history from the Postgres of a self-hosted Life Dashboard Stack",
+  "version": "1.0.1",
+  "websiteUrl": "https://github.com/owen282000/life-dashboard-stack/blob/main/docs/mcp.md",
+  "repository": {
+    "url": "https://github.com/owen282000/life-dashboard-stack",
+    "source": "github",
+    "id": "1348635047",
+    "subfolder": "mcp"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/brand/icon.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/owen282000/life-dashboard-mcp:1.0.1",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--network",
+          "description": "The Docker network of a running Life Dashboard Stack, <project>_default, where the project is COMPOSE_PROJECT_NAME in its .env, else the folder of its docker-compose.yml. install.sh names it life-dashboard. The server reads that stack's Postgres and has no data of its own.",
+          "default": "life-dashboard_default",
+          "isRequired": true
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "Serves MCP on stdio. Over Streamable HTTP, with a bearer token, the stack runs it itself: see docs/mcp.md.",
+          "value": "stdio"
+        },
+        {
+          "name": "PGHOST",
+          "description": "The stack's Postgres: db on the stack's Docker network.",
+          "default": "db",
+          "isRequired": true
+        },
+        {
+          "name": "PGDATABASE",
+          "description": "The stack's database.",
+          "default": "lifedash",
+          "isRequired": true
+        },
+        {
+          "name": "PGUSER",
+          "description": "dash_ro, the stack's user that can only read the dash views.",
+          "default": "dash_ro",
+          "isRequired": true
+        },
+        {
+          "name": "PGPASSWORD",
+          "description": "The password of dash_ro: DASH_DB_PASSWORD in the stack's .env.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

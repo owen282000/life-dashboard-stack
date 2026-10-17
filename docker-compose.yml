@@ -47,8 +47,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # No spaces in the Python line: Podman's Docker API splits a healthcheck's arguments on them.
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      test: ["CMD", "python", "-c", "__import__('urllib.request').request.urlopen('http://127.0.0.1:8080/health',timeout=2)"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -108,7 +109,7 @@ services:
     ports:
       - "${MCP_PORT:-8090}:8090"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"]
+      test: ["CMD", "python", "-c", "__import__('urllib.request').request.urlopen('http://127.0.0.1:8090/health',timeout=2)"]
       interval: 10s
       timeout: 3s
       start_period: 10s

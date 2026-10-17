@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
 # Prepares a release for tagging: moves the Unreleased section of CHANGELOG.md under the new
-# version, points the image defaults in docker-compose.yml and the Helm chart's version and
-# appVersion at it, and updates the version links at the bottom of the changelog. The release
-# workflow checks all of these against the tag it builds.
+# version, points the image defaults in docker-compose.yml, the version in install.sh, the Helm
+# chart's version, appVersion and image list, the version and image of the MCP server in
+# server.json and the version mcp/server.py reports at it, gives the chart that section's
+# entries as its Artifact Hub changelog, and updates the version links at the bottom of the
+# changelog. The release workflow checks all of these against the tag it builds.
 #
 # Usage: scripts/prepare-release.sh 1.1.0
 #
@@ -41,9 +43,47 @@ PY
 # shellcheck disable=SC2016 # the ${...} is literal compose syntax, not a shell expansion
 sed -E -i.bak 's/\$\{LIFEDASH_VERSION:-[0-9]+\.[0-9]+\.[0-9]+\}/${LIFEDASH_VERSION:-'"$V"'}/g' docker-compose.yml && rm docker-compose.yml.bak
 
+# install.sh fetches the release files of the version it carries.
+sed -E -i.bak 's/^VERSION=[0-9]+\.[0-9]+\.[0-9]+$/VERSION='"$V"'/' install.sh && rm install.sh.bak
+
 CHART=charts/life-dashboard/Chart.yaml
 if [ -f "$CHART" ]; then
-    sed -E -i.bak -e 's/^version: .*/version: '"$V"'/' -e 's/^appVersion: .*/appVersion: "'"$V"'"/' "$CHART" && rm "$CHART.bak"
+    sed -E -i.bak -e 's/^version: .*/version: '"$V"'/' -e 's/^appVersion: .*/appVersion: "'"$V"'"/' \
+        -e 's#(ghcr\.io/owen282000/life-dashboard-[a-z]+):[0-9]+\.[0-9]+\.[0-9]+#\1:'"$V"'#' "$CHART" && rm "$CHART.bak"
+    # Artifact Hub's changelog for this version: the entries of its changelog section, by kind.
+    python3 - "$V" "$CHART" <<'PY'
+import json, re, sys
+v, chart = sys.argv[1:]
+kinds = {"Added": "added", "Changed": "changed", "Deprecated": "deprecated", "Removed": "removed",
+         "Fixed": "fixed", "Security": "security"}
+section = re.search(rf"^## \[{re.escape(v)}\].*?\n(.*?)(?=^## \[|^\[[^\]]+\]: |\Z)",
+                    open("CHANGELOG.md").read(), re.M | re.S).group(1)
+changes, kind = [], None
+for line in section.splitlines():
+    if line.startswith("### "):
+        kind = kinds.get(line[4:].strip())
+    elif kind and line.startswith("- "):
+        changes.append([kind, line[2:].strip()])
+    elif kind and changes and line.startswith("  ") and line.strip():
+        changes[-1][1] += " " + line.strip()
+plain = [(k, json.dumps(re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", d), ensure_ascii=False)) for k, d in changes]
+block = "".join(f"    - kind: {k}\n      description: {d}\n" for k, d in plain)
+security = "true" if any(k == "security" for k, _ in changes) else "false"
+s = open(chart).read()
+s = re.sub(r"^  artifacthub\.io/containsSecurityUpdates: .*\n", "", s, flags=re.M)
+s = re.sub(r"^  artifacthub\.io/changes: \|\n(?:    .*\n)*", "", s, flags=re.M)
+new = f'  artifacthub.io/containsSecurityUpdates: "{security}"\n'
+if block:
+    new += "  artifacthub.io/changes: |\n" + block
+s = s.replace("\nannotations:\n", "\nannotations:\n" + new, 1)
+open(chart, "w").write(s)
+PY
 fi
+
+# The MCP Registry entry: the server's version and the image it points at.
+sed -E -i.bak -e 's/^  "version": "[^"]*"/  "version": "'"$V"'"/' \
+    -e 's#"ghcr\.io/owen282000/life-dashboard-mcp:[^"]*"#"ghcr.io/owen282000/life-dashboard-mcp:'"$V"'"#' server.json && rm server.json.bak
+# The version the MCP server reports to clients.
+sed -E -i.bak 's/^VERSION = "[^"]*"/VERSION = "'"$V"'"/' mcp/server.py && rm mcp/server.py.bak
 
 echo "Prepared $V (previous ${PREV:-none}). Check the changelog section, then commit and: git tag $V && git push origin $V"

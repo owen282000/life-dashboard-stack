@@ -4,6 +4,26 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Added
+
+- A one-line install: `curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh`. The POSIX `sh` script, attached to every release, checks for Docker with Compose or Podman, fetches the compose file and `env.example` of its own release, writes `.env` with a random `WEBHOOK_SECRET`, random passwords and, with `--with-api` or `--with-mcp`, random tokens, proposes this machine's address as `PUBLIC_URL` and its time zone, starts the stack, waits until it answers and shows the pairing code. It asks only when there is a terminal, and `--yes` and environment variables make it run unattended. Run again, it keeps `.env`; `--upgrade` moves a folder to a newer release. `sh install.sh` works from a clone too. [docs/install.md](docs/install.md#with-one-line) explains every option.
+- `install.sh --env-only` prints a ready `.env` and the address of the matching `docker-compose.yml`, without Docker or Podman, for Synology Container Manager, Portainer, Unraid, TrueNAS SCALE and other platforms that take a pasted compose file. [On a NAS or in Portainer](docs/install.md#on-a-nas-or-in-portainer) has the steps.
+- A doctor: `install.sh doctor` checks the containers, their health, the published ports, the receiver, Grafana's login, the MCP server and the disk from the host, then runs `python doctor.py` in the receiver, which checks the settings, the database and its migrations, `grafana_ro` and `dash_ro`, the API, and when each phone last sent data. Every check is a `PASS`, `WARN` or `FAIL` line with the fix. `doctor.py` runs on Kubernetes too, through `kubectl exec`. [Troubleshooting](docs/operations.md#troubleshooting) lists the checks.
+- Podman support: the installer and the doctor work with Podman 4.7 or newer, with podman-compose 1.5 or newer or Docker Compose as the provider, rootless included. [Podman](docs/install.md#podman) has what to know.
+- Two MCP tools, so a model knows what it can ask before it asks. `data_catalog` lists per phone every type of data that is stored, with its records, the apps that wrote it and its first and last day, and per tool what has data: the `daily_summary` fields, the days of `sleep_nights`, `workouts` and `screen_time`, and every `trend` metric. `sync_status` says when each phone last sent a payload, and per type and writing app when the newest record arrived, how regularly it usually does and whether it went quiet: a daily type after 2 days without a record, a weekly one after 14. Both take an optional `phone`. The server now has eight read-only tools.
+- `/api/catalog` and `/api/sync` give the same in the read-only API.
+- The views `dash.data_types` (per phone and type: records, windows, sources, first and last day, and the cadence and `quiet` above) and `dash.data_sources` (the same per writing app, counting the windows of series sent per time window too), described in [docs/views.md](docs/views.md#data-and-sync). `grafana_ro` and `dash_ro` can read them.
+- The MCP server is listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.owen282000/life-dashboard`: `server.json` describes the image over stdio on the stack's Docker network, the MCP image carries the label the registry checks, and each release publishes the new version. It reads the stack's database, so it still needs a running stack.
+- The Helm chart is on [Artifact Hub](https://artifacthub.io/packages/search?repo=life-dashboard), with its category, the four images, links, screenshots of the dashboards and each version's changes from this changelog. Each release also pushes `charts/artifacthub-repo.yml` to the chart's repository, which makes it a verified publisher there.
+
+### Changed
+
+- The API and the MCP server switch off Postgres's JIT for their connections. Their queries take milliseconds, and compiling one took longer than running it.
+
+### Fixed
+
+- The healthchecks of the receiver and the MCP server in `docker-compose.yml` work under Podman with Docker Compose as its provider, which split their Python line on its spaces, so the receiver never turned healthy and Grafana never started. Docker runs the same check as before.
+
 ## [1.0.1] - 2026-10-16
 
 ### Security
