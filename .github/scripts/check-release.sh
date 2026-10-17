@@ -4,9 +4,10 @@
 # leaves them: the version is strict semver and higher than every other version tag, the Helm
 # chart's version, appVersion and four images are the version, docker-compose.yml defaults all
 # five image lines to it, install.sh carries it, server.json has it as the MCP server's version
-# and image tag under the name the MCP image's label carries, mcp/server.py reports it, and
-# CHANGELOG.md has a section for it. The release workflow runs this on the tag, and the test
-# workflow on a throwaway checkout after prepare-release.sh.
+# and image tag under the name the MCP image's label carries, mcp/server.py reports it,
+# receiver/receiver.py names it in its answer to a signed payload, and CHANGELOG.md has a
+# section for it. The release workflow runs this on the tag, and the test workflow on a
+# throwaway checkout after prepare-release.sh.
 #
 # Usage: .github/scripts/check-release.sh 1.2.3
 #
@@ -55,6 +56,9 @@ import re
 m = re.search(r'^VERSION = "([^"]*)"', open("mcp/server.py").read(), re.M)
 if not m or m.group(1) != v:
     problems.append(f"mcp/server.py reports version {m.group(1) if m else '(none)'}; it should be {v} (scripts/prepare-release.sh {v} sets it)")
+m = re.search(r'^VERSION = "([^"]*)"', open("receiver/receiver.py").read(), re.M)
+if not m or m.group(1) != v:
+    problems.append(f"receiver/receiver.py names version {m.group(1) if m else '(none)'}; it should be {v} (scripts/prepare-release.sh {v} sets it)")
 images = [p.get("identifier") for p in s.get("packages", [])]
 if images != [f"ghcr.io/owen282000/life-dashboard-mcp:{v}"]:
     problems.append(f"server.json should have one package, ghcr.io/owen282000/life-dashboard-mcp:{v} (found {images})")

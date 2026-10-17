@@ -54,8 +54,8 @@ jobs:
           done
 
   # scripts/prepare-release.sh in a throwaway clone, then the release workflow's own check on the
-  # result: the changelog, the compose file, install.sh, the chart, server.json and the MCP
-  # server's version all move to the next version together.
+  # result: the changelog, the compose file, install.sh, the chart, server.json and the versions
+  # of the MCP server and the receiver all move to the next version together.
   release-files:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -82,8 +82,9 @@ jobs:
           scripts/prepare-release.sh "$next"
           git diff --stat
           echo "::endgroup::"
-          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml install.sh mcp/server.py server.json " ] \
-            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, install.sh, Chart.yaml, mcp/server.py and server.json"; exit 1; }
+          [ "$(git diff --name-only | sort | tr '\n' ' ')" = "CHANGELOG.md charts/life-dashboard/Chart.yaml docker-compose.yml install.sh mcp/server.py receiver/receiver.py server.json " ] \
+            || { echo "::error::prepare-release.sh changed other files than the changelog, the compose file, install.sh, Chart.yaml, mcp/server.py, receiver/receiver.py and server.json"; exit 1; }
+          grep -qx "VERSION = \"$next\"" receiver/receiver.py
           grep -qx "VERSION=$next" install.sh
           grep -q "^## \[$next\] - $(date +%Y-%m-%d)$" CHANGELOG.md
           grep -q "^\[Unreleased\]: .*/compare/$next\.\.\.HEAD$" CHANGELOG.md

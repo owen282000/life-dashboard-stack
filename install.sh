@@ -721,10 +721,14 @@ summary() {
     port_g=$(env_get .env GRAFANA_PORT)
     port_m=$(env_get .env MCP_PORT)
     public=$(env_get .env PUBLIC_URL)
+    receiver=${public:-http://$host:$(port_of RECEIVER_PORT 8080)}
+    # The /pair page is on unless PAIRING_PAGE switches it off, as the receiver reads it.
+    case $(env_get .env PAIRING_PAGE | tr '[:upper:]' '[:lower:]') in 0 | false | off | no) page= ;; *) page=${receiver%/}/pair ;; esac
     step "Life Dashboard Stack is running"
     say "Folder:    $DIR (Compose project $PROJECT, $ENGINE_VERSION)"
     say "Grafana:   http://$host:${port_g:-3000}  user admin, the password is GRAFANA_PASSWORD in $DIR/.env"
-    say "Receiver:  ${public:-http://$host:$(port_of RECEIVER_PORT 8080)} (PUBLIC_URL)"
+    say "Receiver:  $receiver (PUBLIC_URL)"
+    [ -z "$page" ] || say "Pairing:   $page (another phone: ?label=<label>)"
     if [ -n "$(env_get .env API_TOKEN)" ]; then
         say "API:       on, under /api/ on the receiver, with API_TOKEN from .env (docs/api.md)"
     fi
@@ -739,7 +743,12 @@ summary() {
     say "Next:"
     say "  1. In Life Dashboard Companion, open the Webhook card, tap Scan a pairing code and scan"
     say "     the code above. Then Sync Now and Backfill."
-    say "  2. Another phone gets its own label: cd $DIR && $COMPOSE_TEXT exec receiver python pairing.py <label>"
+    if [ -n "$page" ]; then
+        say "  2. Another phone gets its own label: open $page?label=<label>"
+        say "     from your own network, or run: cd $DIR && $COMPOSE_TEXT exec receiver python pairing.py <label>"
+    else
+        say "  2. Another phone gets its own label: cd $DIR && $COMPOSE_TEXT exec receiver python pairing.py <label>"
+    fi
     say "  3. Something wrong? $ONE_LINER -s -- doctor --dir $DIR"
     say "  Upgrade later with the same line and --upgrade --dir $DIR."
 }

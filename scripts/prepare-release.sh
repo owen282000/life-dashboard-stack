@@ -3,7 +3,8 @@
 # Prepares a release for tagging: moves the Unreleased section of CHANGELOG.md under the new
 # version, points the image defaults in docker-compose.yml, the version in install.sh, the Helm
 # chart's version, appVersion and image list, the version and image of the MCP server in
-# server.json and the version mcp/server.py reports at it, gives the chart that section's
+# server.json and the version mcp/server.py reports at it, the version receiver/receiver.py
+# names in its answer to a signed payload, gives the chart that section's
 # entries as its Artifact Hub changelog, and updates the version links at the bottom of the
 # changelog. The release workflow checks all of these against the tag it builds.
 #
@@ -85,5 +86,7 @@ sed -E -i.bak -e 's/^  "version": "[^"]*"/  "version": "'"$V"'"/' \
     -e 's#"ghcr\.io/owen282000/life-dashboard-mcp:[^"]*"#"ghcr.io/owen282000/life-dashboard-mcp:'"$V"'"#' server.json && rm server.json.bak
 # The version the MCP server reports to clients.
 sed -E -i.bak 's/^VERSION = "[^"]*"/VERSION = "'"$V"'"/' mcp/server.py && rm mcp/server.py.bak
+# The version the receiver names in its answer to a signed payload.
+sed -E -i.bak 's/^VERSION = "[^"]*"/VERSION = "'"$V"'"/' receiver/receiver.py && rm receiver/receiver.py.bak
 
 echo "Prepared $V (previous ${PREV:-none}). Check the changelog section, then commit and: git tag $V && git push origin $V"
