@@ -133,6 +133,8 @@ Restart the receiver afterward (`docker compose restart receiver`) so it rebuild
 - `grafana_ro` can read the `records` and `buckets` tables and the `dash` views, and nothing else. It can't write or read the payload ledger, and its queries stop after 30 seconds.
 - Postgres isn't published on a port. Its own user and password are `lifedash`, set in `docker-compose.yml` for the database and the receiver. If other people can reach the Docker host, change both before the first start.
 
+To report a security problem privately, see [SECURITY.md](../SECURITY.md).
+
 ## Another data source in Grafana
 
 The Grafana image keeps only the data source plugin the dashboards use, PostgreSQL. The other data sources that Grafana ships as separate plugins are left out, because each brings known vulnerabilities of its own: Prometheus, Loki, Tempo, Jaeger, Zipkin, Pyroscope, Elasticsearch, InfluxDB, MySQL, Microsoft SQL Server, OpenTSDB and Google Cloud Monitoring. The ones built into Grafana itself, such as Graphite, CloudWatch, Azure Monitor and TestData, are still there, and so is every panel.
