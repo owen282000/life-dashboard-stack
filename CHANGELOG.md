@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-17
+
 ### Added
 
 - A one-line install: `curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh`. The POSIX `sh` script, attached to every release, checks for Docker with Compose or Podman, fetches the compose file and `env.example` of its own release, writes `.env` with a random `WEBHOOK_SECRET`, random passwords and, with `--with-api` or `--with-mcp`, random tokens, proposes this machine's address as `PUBLIC_URL` and its time zone, starts the stack, waits until it answers and shows the pairing code. It asks only when there is a terminal, and `--yes` and environment variables make it run unattended. Run again, it keeps `.env`; `--upgrade` moves a folder to a newer release. `sh install.sh` works from a clone too. [docs/install.md](docs/install.md#with-one-line) explains every option.
@@ -76,6 +78,7 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...1.1.0
 [1.0.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/owen282000/life-dashboard-stack/releases/tag/1.0.0

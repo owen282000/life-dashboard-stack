@@ -26,7 +26,7 @@ set -eu
 
 # The release this script belongs to. scripts/prepare-release.sh sets it, and
 # .github/scripts/check-release.sh refuses a tag it doesn't match.
-VERSION=1.0.1
+VERSION=1.1.0
 REPO=https://github.com/owen282000/life-dashboard-stack
 # Where the release files come from; LIFEDASH_DOWNLOAD points at a mirror or a test folder.
 DOWNLOAD=${LIFEDASH_DOWNLOAD:-$REPO/releases/download/$VERSION}
