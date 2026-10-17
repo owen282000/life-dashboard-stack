@@ -4,6 +4,10 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Changed
+
+- On Artifact Hub, the chart starts with the phone: its description and README name the Android and iPhone apps first, with where to get them and the How it works diagram, and its links list the apps and the Home Assistant integration.
+
 ## [1.1.0] - 2026-10-17
 
 ### Added
