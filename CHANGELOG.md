@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-17
+
 ### Changed
 
 - The pairing block, in the receiver's log, from `python pairing.py` and from the installer, names the `/pair` page by its full address, such as `http://192.168.1.10:8080/pair?label=<label>`, built from `PUBLIC_URL`, and says when it needs `&token=`. With `PAIRING_PAGE=0`, as on Kubernetes by default and under a rootless engine, it points to `python pairing.py <label>` instead. The installer's summary lists the page under **Pairing**.
@@ -98,7 +100,8 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.1...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.2...HEAD
+[1.1.2]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.1...1.1.2
 [1.1.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...1.1.0
 [1.0.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...1.0.1

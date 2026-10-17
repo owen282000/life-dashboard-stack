@@ -9,8 +9,8 @@ type: application
 # One version for the whole stack: the chart, the four images it runs and docker-compose.yml
 # all carry the release version. scripts/prepare-release.sh sets these two lines and the
 # images in artifacthub.io/images below, and a release tag must equal them.
-version: 1.1.1
-appVersion: "1.1.1"
+version: 1.1.2
+appVersion: "1.1.2"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/owen282000/life-dashboard-stack
 sources:
@@ -31,30 +31,26 @@ maintainers:
 # Artifact Hub would otherwise take them from a dry run with the default values, which leave
 # out the MCP server.
 annotations:
-  artifacthub.io/containsSecurityUpdates: "true"
+  artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/changes: |
-    - kind: security
-      description: "The receiver and MCP server images are built on Alpine (`python:3.14.8-alpine`) instead of Debian (`python:3.14.8-slim`), and no longer carry pip. Trivy found 48 high-severity vulnerabilities in each 1.1.0 image: 44 in Debian packages the stack never uses, such as util-linux, with no fix available, and 4 in the packages pip bundles, such as urllib3. In the new images it finds none, of any severity, and the download shrinks from 54 to 28 MB for the receiver and from 67 to 42 MB for the MCP server. Python, the commands such as `python pairing.py` and `python doctor.py`, and the healthchecks stay the same; a shell in these containers is `sh`, not `bash`."
-    - kind: security
-      description: "The Grafana image drops the data source plugins that Grafana bundles and the stack does not use (Prometheus, Loki, Tempo, Jaeger, Zipkin, Pyroscope, Elasticsearch, InfluxDB, MySQL, Microsoft SQL Server, OpenTSDB and Google Cloud Monitoring), which removes 52 of its 60 known high vulnerabilities. The 8 left are in Grafana itself and in its PostgreSQL plugin, and go with a Grafana update. Added one of those data sources by hand? Another data source in Grafana says how to get it back."
-    - kind: security
-      description: "The db image drops the official Postgres image's `gosu`, built with an old Go and the source of all its 25 known critical and high vulnerabilities, for Alpine's `su-exec`. The image now has none, and starts as before."
     - kind: changed
-      description: "On Artifact Hub, the chart starts with the phone: its description and README name the Android and iPhone apps first, with where to get them and the How it works diagram, and its links list the apps and the Home Assistant integration."
+      description: "The pairing block, in the receiver's log, from `python pairing.py` and from the installer, names the `/pair` page by its full address, such as `http://192.168.1.10:8080/pair?label=<label>`, built from `PUBLIC_URL`, and says when it needs `&token=`. With `PAIRING_PAGE=0`, as on Kubernetes by default and under a rootless engine, it points to `python pairing.py <label>` instead. The installer's summary lists the page under **Pairing**."
+    - kind: fixed
+      description: "The apps' pairing test now reports the stack as confirmed. The iPhone app said \"Delivered, but the Life Dashboard integration did not answer\" after pairing with the stack, because it counts a test ping as confirmed only when the answer names the request's signature, as the Home Assistant integration's answer does. With `WEBHOOK_SECRET` set, the receiver now answers every payload it takes with `life_dashboard` (`receiver` and `version`) and `writeback.in_reply_to`, signed with a key derived from the secret, in the same way. It announces no write-back protocol, so the apps still take no measurements from it, and a refusal or a receiver without a secret answers as before. docs/compatibility.md has the format."
   artifacthub.io/license: MIT
   artifacthub.io/category: monitoring-logging
   artifacthub.io/images: |
     - name: receiver
-      image: ghcr.io/owen282000/life-dashboard-receiver:1.1.1
+      image: ghcr.io/owen282000/life-dashboard-receiver:1.1.2
       platforms: [linux/amd64, linux/arm64]
     - name: grafana
-      image: ghcr.io/owen282000/life-dashboard-grafana:1.1.1
+      image: ghcr.io/owen282000/life-dashboard-grafana:1.1.2
       platforms: [linux/amd64, linux/arm64]
     - name: db
-      image: ghcr.io/owen282000/life-dashboard-db:1.1.1
+      image: ghcr.io/owen282000/life-dashboard-db:1.1.2
       platforms: [linux/amd64, linux/arm64]
     - name: mcp
-      image: ghcr.io/owen282000/life-dashboard-mcp:1.1.1
+      image: ghcr.io/owen282000/life-dashboard-mcp:1.1.2
       platforms: [linux/amd64, linux/arm64]
   artifacthub.io/links: |
     - name: Android app

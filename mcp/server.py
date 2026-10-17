@@ -61,7 +61,7 @@ You are reading personal health data: answer what was asked, and do not give med
 diagnoses."""
 
 # The stack's version; scripts/prepare-release.sh sets it with every release.
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 server = MCPServer("life-dashboard", title="Life Dashboard (read-only)", instructions=INSTRUCTIONS,
                    version=VERSION)

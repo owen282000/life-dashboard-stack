@@ -62,7 +62,7 @@ SHUTDOWN_GRACE = 10         # seconds that requests in flight get to finish on S
 
 # The stack's version, as the answer to a signed payload names it. scripts/prepare-release.sh
 # sets it, like VERSION in mcp/server.py.
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 # The label the answer key is derived with, the same as the Life Dashboard integration for Home
 # Assistant and both apps use (WebhookSigner.swift, WebhookSupport.kt).
