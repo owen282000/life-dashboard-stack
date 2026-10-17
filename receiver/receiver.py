@@ -60,6 +60,14 @@ MIGRATION_LOCK = 4_242_017  # pg_advisory_lock key, the same constant in every r
 CONNECT_TIMEOUT = 5         # seconds, for the connection of every payload
 SHUTDOWN_GRACE = 10         # seconds that requests in flight get to finish on SIGTERM
 
+# The stack's version, as the answer to a signed payload names it. scripts/prepare-release.sh
+# sets it, like VERSION in mcp/server.py.
+VERSION = "1.1.1"
+
+# The label the answer key is derived with, the same as the Life Dashboard integration for Home
+# Assistant and both apps use (WebhookSigner.swift, WebhookSupport.kt).
+RESPONSE_KEY_LABEL = b"life-dashboard-response-v1"
+
 # Envelope keys that are never record arrays.
 ENVELOPE_KEYS = {
     "timestamp", "app_version", "source", "sequence", "device", "app_filter", "test",
@@ -391,6 +399,31 @@ def ingest(dsn: str, install: str, body: bytes) -> tuple[int, dict]:
     return 200, {"stored": len(rows), "buckets": len(buckets), "deleted": deleted, "skipped": skipped}
 
 
+# ------------------------------------------------------------------ the answer
+
+def response_signature(secret: str, body: bytes) -> str:
+    """The X-Signature of an answer: HMAC-SHA256 over its bytes, keyed with HMAC(secret, label).
+
+    A key of its own, so a captured request can never be played back as an answer.
+    """
+    key = hmac.new(secret.encode(), RESPONSE_KEY_LABEL, hashlib.sha256).digest()
+    return "sha256=" + hmac.new(key, body, hashlib.sha256).hexdigest()
+
+
+def confirmation(request_signature: str) -> dict:
+    """What a signed payload that was taken gets added to its answer, as the integration does.
+
+    The apps' pairing test reads `writeback.in_reply_to`, the request's own X-Signature, as
+    proof that the receiver checked it with its own copy of the secret. `life_dashboard` names
+    this receiver and announces no write-back protocol (no `writeback` number in it), so the
+    apps read it as a receiver that sends no measurements back.
+    """
+    return {
+        "life_dashboard": {"receiver": "life-dashboard-stack", "version": VERSION},
+        "writeback": {"in_reply_to": request_signature},
+    }
+
+
 # ------------------------------------------------------------------ setup
 
 class SetupError(Exception):
@@ -513,12 +546,15 @@ class Handler(BaseHTTPRequestHandler):
     api_token = api.API_TOKEN
     api_dsn = api.dsn(DB_DSN)
 
-    def _reply(self, code: int, body: dict, headers: dict | None = None) -> None:
+    def _reply(self, code: int, body: dict, headers: dict | None = None, sign: bool = False) -> None:
         data = json.dumps(body).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         for name, value in (headers or {}).items():
             self.send_header(name, value)
+        if sign:
+            # Over the exact bytes that follow, as the apps check it.
+            self.send_header("X-Signature", response_signature(self.secret, data))
         self.send_header("Content-Length", str(len(data)))
         if self.close_connection:
             self.send_header("Connection", "close")
@@ -593,6 +629,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         body = self.rfile.read(length)
 
+        provided = ""
         if self.secret:
             expected = "sha256=" + hmac.new(self.secret.encode(), body, hashlib.sha256).hexdigest()
             provided = self.headers.get("X-Signature", "")
@@ -609,7 +646,13 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001
             log(f"store failed for install {install}: {exc}")
             code, reply = 500, {"error": "storage failure"}
-        self._reply(code, reply)
+        # A payload it took, signed with the secret: answered as the integration answers, so
+        # the apps' pairing test sees the receiver confirm it. Unsigned, with no secret set,
+        # there is nothing to confirm with.
+        confirmed = code == 200 and bool(self.secret)
+        if confirmed:
+            reply = {**reply, **confirmation(provided)}
+        self._reply(code, reply, sign=confirmed)
 
     def log_message(self, fmt, *args):
         if self.command == "GET" and self.path == "/health":
@@ -649,7 +692,8 @@ def main() -> None:
     if PAIRING_TOKEN and len(PAIRING_TOKEN) < pairing.MIN_TOKEN:
         log(f"PAIRING_TOKEN is ignored: it needs at least {pairing.MIN_TOKEN} characters")
     if PAIRING_LOG:
-        print(pairing.log_block(PUBLIC_URL, SECRET), flush=True)
+        print(pairing.log_block(PUBLIC_URL, SECRET, page=PAIRING_PAGE,
+                                token=len(PAIRING_TOKEN) >= pairing.MIN_TOKEN), flush=True)
     STOP.wait()
     # Stop taking new connections, then give the requests in flight a moment to finish, so
     # a rollout doesn't cut off a payload halfway.

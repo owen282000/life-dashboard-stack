@@ -4,6 +4,14 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Changed
+
+- The pairing block, in the receiver's log, from `python pairing.py` and from the installer, names the `/pair` page by its full address, such as `http://192.168.1.10:8080/pair?label=<label>`, built from `PUBLIC_URL`, and says when it needs `&token=`. With `PAIRING_PAGE=0`, as on Kubernetes by default and under a rootless engine, it points to `python pairing.py <label>` instead. The installer's summary lists the page under **Pairing**.
+
+### Fixed
+
+- The apps' pairing test now reports the stack as confirmed. The iPhone app said "Delivered, but the Life Dashboard integration did not answer" after pairing with the stack, because it counts a test ping as confirmed only when the answer names the request's signature, as the Home Assistant integration's answer does. With `WEBHOOK_SECRET` set, the receiver now answers every payload it takes with `life_dashboard` (`receiver` and `version`) and `writeback.in_reply_to`, signed with a key derived from the secret, in the same way. It announces no write-back protocol, so the apps still take no measurements from it, and a refusal or a receiver without a secret answers as before. [docs/compatibility.md](docs/compatibility.md#the-payloads-the-receiver-accepts) has the format.
+
 ## [1.1.1] - 2026-10-17
 
 ### Security

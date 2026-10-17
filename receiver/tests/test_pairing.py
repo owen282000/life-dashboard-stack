@@ -288,6 +288,20 @@ def test_log_block():
     assert "does not work" in text and SECRET not in text
 
 
+def test_log_block_names_where_another_phone_pairs():
+    text = pairing.log_block("http://192.168.10.138:8080/", SECRET)
+    assert "open http://192.168.10.138:8080/pair?label=<label>\nfrom your own network" in text
+    assert "pairing.py" not in text and "token" not in text
+    text = pairing.log_block("http://192.168.10.138:8080", SECRET, token=True)
+    assert "/pair?label=<label>" in text and "add &token=<PAIRING_TOKEN>" in text
+    # The page is off (the chart's default, a rootless engine): the command instead.
+    text = pairing.log_block("http://192.168.10.138:8080", SECRET, page=False, token=True)
+    assert "/pair" not in text.replace(pairing.PAIR_PAGE, "")
+    assert "run python pairing.py <label> in the\nreceiver's container" in text
+    text = pairing.log_block("", SECRET, page=False)
+    assert "PUBLIC_URL is not set" in text and "/pair" not in text
+
+
 def run_receiver(dsn, until, **env):
     """Start receiver.py against a database, read its output up to a line, then stop it."""
     full = dict(os.environ, WEBHOOK_SECRET=SECRET, PORT="0", DATABASE_URL=dsn, TZ="UTC",
@@ -331,10 +345,16 @@ def test_log_switch_keeps_the_secret_out(db):
 
 def test_pairing_py_prints_the_code_on_demand():
     env = dict(os.environ, PUBLIC_URL="http://192.168.1.10:8080", WEBHOOK_SECRET=SECRET)
+    for name in ("PAIRING_PAGE", "PAIRING_TOKEN"):
+        env.pop(name, None)
     out = subprocess.run([sys.executable, str(RECEIVER_DIR / "pairing.py"), "pixel"], env=env,
                          capture_output=True, text=True, check=True).stdout
     assert pairing.pairing_url("http://192.168.1.10:8080/webhook/pixel", SECRET) in out
     assert "█" in out and "PAIRING_LOG" not in out
+    assert "open http://192.168.1.10:8080/pair?label=<label>" in out
+    off = subprocess.run([sys.executable, str(RECEIVER_DIR / "pairing.py"), "pixel"],
+                         env=dict(env, PAIRING_PAGE="0"), capture_output=True, text=True, check=True).stdout
+    assert "python pairing.py <label>" in off and "/pair?label" not in off
     bad = subprocess.run([sys.executable, str(RECEIVER_DIR / "pairing.py"), "Not A Label"], env=env,
                          capture_output=True, text=True)
     assert bad.returncode == 2 and SECRET not in bad.stdout

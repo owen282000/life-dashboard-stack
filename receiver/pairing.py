@@ -186,8 +186,29 @@ def svg_qr(link: str) -> str:
 
 # ------------------------------------------------------------------ the log block
 
-def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start: bool = True) -> str:
-    """What the receiver prints at startup when PAIRING_LOG is on, or pairing.py on demand."""
+def page_url(base: str) -> str:
+    return base.rstrip("/") + "/pair"
+
+
+def another_phone(public_url: str, label: str, page: bool, token: bool) -> list[str]:
+    """Where the code for another phone comes from: the /pair page when it is on, else pairing.py."""
+    if not page:
+        return [f"Phone label: {label}. For another phone, run python pairing.py <label> in the",
+                "receiver's container: every phone needs its own label."]
+    lines = [f"Phone label: {label}. For another phone, open {page_url(public_url)}?label=<label>",
+             "from your own network: every phone needs its own label."]
+    if token:
+        lines.append("From outside it, add &token=<PAIRING_TOKEN>.")
+    return lines
+
+
+def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start: bool = True,
+              *, page: bool = True, token: bool = False) -> str:
+    """What the receiver prints at startup when PAIRING_LOG is on, or pairing.py on demand.
+
+    page says whether /pair is on (PAIRING_PAGE), token whether PAIRING_TOKEN opens it from
+    outside your own network, so the block points to the way that works.
+    """
     rule = "=" * 72
     out = [rule, "Pair a phone with this receiver", ""]
     problem = secret_problem(secret)
@@ -198,6 +219,13 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start
             "generated value, which is not in use anywhere yet:",
             "",
             f"  WEBHOOK_SECRET={suggest_secret()}",
+        ]
+    elif not public_url and not page:
+        out += [
+            "No pairing code: PUBLIC_URL is not set, and from inside its container the receiver",
+            "cannot tell which address your phone reaches it on. Set PUBLIC_URL to that address,",
+            "such as http://192.168.1.10:8080, and restart the receiver; this block then shows",
+            "the code.",
         ]
     elif not public_url:
         out += [
@@ -221,8 +249,7 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start
             "",
             terminal_qr(link),
             "",
-            f"Phone label: {label}. For another phone, open /pair?label=<label> on this",
-            "receiver from your own network: every phone needs its own label.",
+            *another_phone(public_url, label, page, token),
             "",
             "The same as a link (open it on the phone itself):",
             link,
@@ -436,7 +463,8 @@ def main(argv: list[str]) -> int:
         print("A label is 1 to 32 lowercase letters, digits, - and _.")
         return 2
     print(log_block(os.environ.get("PUBLIC_URL", "").strip(), os.environ.get("WEBHOOK_SECRET", ""),
-                    label, at_start=False))
+                    label, at_start=False, page=is_on(os.environ.get("PAIRING_PAGE")),
+                    token=len(os.environ.get("PAIRING_TOKEN", "").strip()) >= MIN_TOKEN))
     return 0
 
 
