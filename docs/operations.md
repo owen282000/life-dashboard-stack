@@ -9,6 +9,7 @@ How to keep a Docker Compose install up to date, find what's wrong with it, back
 - [Troubleshooting](#troubleshooting)
 - [Backups](#backups)
 - [Exposing it safely](#exposing-it-safely)
+- [Another data source in Grafana](#another-data-source-in-grafana)
 - [Build from source](#build-from-source)
 - [Known gaps](#known-gaps)
 
@@ -131,6 +132,19 @@ Restart the receiver afterward (`docker compose restart receiver`) so it rebuild
 - Grafana only reads `GRAFANA_PASSWORD` when it creates its admin user on the first start; change the password in Grafana after that. `GRAFANA_DB_PASSWORD` is read at every start, by the receiver and by Grafana.
 - `grafana_ro` can read the `records` and `buckets` tables and the `dash` views, and nothing else. It can't write or read the payload ledger, and its queries stop after 30 seconds.
 - Postgres isn't published on a port. Its own user and password are `lifedash`, set in `docker-compose.yml` for the database and the receiver. If other people can reach the Docker host, change both before the first start.
+
+## Another data source in Grafana
+
+The Grafana image keeps only the data source plugin the dashboards use, PostgreSQL. The other data sources that Grafana ships as separate plugins are left out, because each brings known vulnerabilities of its own: Prometheus, Loki, Tempo, Jaeger, Zipkin, Pyroscope, Elasticsearch, InfluxDB, MySQL, Microsoft SQL Server, OpenTSDB and Google Cloud Monitoring. The ones built into Grafana itself, such as Graphite, CloudWatch, Azure Monitor and TestData, are still there, and so is every panel.
+
+If you added one of those data sources by hand, Grafana shows it as a missing plugin after the upgrade, and an alert rule that queries it goes to the Error state and can send a DatasourceError notification. Install it from the Grafana catalog into Grafana's volume, where it stays across upgrades, and restart Grafana:
+
+```bash
+docker compose exec grafana grafana cli plugins install prometheus
+docker compose restart grafana
+```
+
+The plugin IDs are `prometheus`, `loki`, `tempo`, `jaeger`, `zipkin`, `grafana-pyroscope-datasource`, `elasticsearch`, `influxdb`, `mysql`, `mssql`, `opentsdb` and `stackdriver` (Google Cloud Monitoring). A plugin installed this way doesn't change with the image; `grafana cli plugins update-all` updates it. On Kubernetes, run the same command with `kubectl -n life-dashboard exec deploy/lifedash-life-dashboard-grafana --` and restart with `kubectl -n life-dashboard rollout restart deployment/lifedash-life-dashboard-grafana`; it needs `grafana.persistence.enabled`, which is on by default, and with `networkPolicy.enabled` Grafana needs `networkPolicy.grafanaEgress` to reach grafana.com. The image also switches off Grafana's `prometheusTypeMigration` feature toggle, which needs the Prometheus plugin; `GF_FEATURE_TOGGLES_PROMETHEUSTYPEMIGRATION=true` switches it on again.
 
 ## Build from source
 
