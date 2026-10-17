@@ -26,6 +26,7 @@ env:
   ACTIONLINT_IMAGE: rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
   SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
   ALPINE_IMAGE: alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+  TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
   PODMAN_COMPOSE_VERSION: 1.6.0
 
 jobs:
@@ -120,7 +121,7 @@ jobs:
       - run: python -m pytest -q ${{ matrix.suite }}/tests
 
   # Every image for both architectures, without pushing, so a broken Dockerfile fails here
-  # and not on the release tag.
+  # and not on the release tag. Then Trivy on the amd64 image.
   images:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -140,6 +141,24 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      # The amd64 image once more, from the cache, into Docker for Trivy. It lists the high and
+      # critical vulnerabilities, and fails on a critical one that has a fix.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.image }}/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: life-dashboard-${{ matrix.image }}:scan
+          cache-from: type=gha,scope=${{ matrix.image }}
+      - name: Trivy
+        run: |
+          trivy() {
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$RUNNER_TEMP/trivy:/root/.cache/trivy" \
+              "$TRIVY_IMAGE" image --scanners vuln --no-progress --table-mode detailed "$@" "life-dashboard-${{ matrix.image }}:scan"
+          }
+          trivy --severity HIGH,CRITICAL
+          trivy --skip-db-update --severity CRITICAL --ignore-unfixed --exit-code 1
 
   # The whole stack built from this commit, with the sample data: the receiver answers,
   # Grafana provisions all six dashboards, grafana_ro can read the dash views, and the API
@@ -169,6 +188,12 @@ jobs:
           done
           echo "dashboards: $n"
           [ "$n" = 6 ]
+          # The Grafana image keeps only the plugins the stack uses: every panel and data source
+          # type in the dashboards must be there.
+          for t in $(jq -r '[.. | objects | select(has("gridPos")) | .type | select(. != "row")] + [.. | objects | .datasource? | objects | .type] | .[]' \
+              grafana/dashboards/life-dashboard/*.json | sort -u); do
+            curl -fsS -o /dev/null -u admin:ci-admin "http://127.0.0.1:3000/api/plugins/$t/settings" || { echo "missing plugin: $t"; exit 1; }
+          done
           docker compose exec -T -e PGPASSWORD=ci-ro db psql -h 127.0.0.1 -U grafana_ro -d lifedash -v ON_ERROR_STOP=1 -XAt \
             -c "SELECT count(*) FROM dash.activity_days" -c "SELECT count(*) FROM dash.screen_apps"
       - name: Check the API and the MCP server

@@ -122,7 +122,10 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           provenance: mode=max
           sbom: true
-          cache-from: type=gha,scope=${{ matrix.image }}
+          # A release builds from scratch, so the apk upgrade and the base image's newest
+          # patches go in, not a layer cached by an earlier pull request. It still fills the
+          # cache for the test workflow.
+          no-cache: true
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
       # A signed GitHub attestation as well, checked with: gh attestation verify oci://<image> -R owen282000/life-dashboard-stack
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

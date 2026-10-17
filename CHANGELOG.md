@@ -4,6 +4,16 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Security
+
+- The receiver and MCP server images are built on Alpine (`python:3.14.8-alpine`) instead of Debian (`python:3.14.8-slim`), and no longer carry pip. Trivy found 48 high-severity vulnerabilities in each 1.1.0 image: 44 in Debian packages the stack never uses, such as util-linux, with no fix available, and 4 in the packages pip bundles, such as urllib3. In the new images it finds none, of any severity, and the download shrinks from 54 to 28 MB for the receiver and from 67 to 42 MB for the MCP server. Python, the commands such as `python pairing.py` and `python doctor.py`, and the healthchecks stay the same; a shell in these containers is `sh`, not `bash`.
+- The Grafana image drops the data source plugins that Grafana bundles and the stack does not use (Prometheus, Loki, Tempo, Jaeger, Zipkin, Pyroscope, Elasticsearch, InfluxDB, MySQL, Microsoft SQL Server, OpenTSDB and Google Cloud Monitoring), which removes 52 of its 60 known high vulnerabilities. The 8 left are in Grafana itself and in its PostgreSQL plugin, and go with a Grafana update. Added one of those data sources by hand? [Another data source in Grafana](docs/operations.md#another-data-source-in-grafana) says how to get it back.
+- The db image drops the official Postgres image's `gosu`, built with an old Go and the source of all its 25 known critical and high vulnerabilities, for Alpine's `su-exec`. The image now has none, and starts as before.
+
+### Changed
+
+- On Artifact Hub, the chart starts with the phone: its description and README name the Android and iPhone apps first, with where to get them and the How it works diagram, and its links list the apps and the Home Assistant integration.
+
 ## [1.1.0] - 2026-10-17
 
 ### Added

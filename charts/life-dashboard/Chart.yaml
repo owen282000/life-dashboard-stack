@@ -1,9 +1,10 @@
 apiVersion: v2
 name: life-dashboard
 description: >-
-  The Life Dashboard Stack on Kubernetes: the receiver for the Life Dashboard Companion apps,
+  Your phone's health data and screen time in your own cluster: the backend for the Life
+  Dashboard Companion apps for Android (Health Connect) and iPhone (Apple Health). A receiver,
   Postgres (CloudNativePG, a bundled StatefulSet or your own), Grafana with six dashboards,
-  and an optional read-only MCP server.
+  and an optional read-only MCP server for the AI you choose.
 type: application
 # One version for the whole stack: the chart, the four images it runs and docker-compose.yml
 # all carry the release version. scripts/prepare-release.sh sets these two lines and the
@@ -70,6 +71,14 @@ annotations:
       image: ghcr.io/owen282000/life-dashboard-mcp:1.1.0
       platforms: [linux/amd64, linux/arm64]
   artifacthub.io/links: |
+    - name: Android app
+      url: https://github.com/owen282000/life-dashboard-companion-app
+    - name: iPhone app
+      url: https://github.com/owen282000/life-dashboard-companion-app-ios
+    - name: Home Assistant integration
+      url: https://github.com/owen282000/life-dashboard-ha
+    - name: Website
+      url: https://owen282000.com/life-dashboard/grafana/
     - name: Kubernetes guide
       url: https://github.com/owen282000/life-dashboard-stack/blob/main/docs/kubernetes.md
     - name: Changelog

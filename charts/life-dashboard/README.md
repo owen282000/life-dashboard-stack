@@ -2,7 +2,18 @@
 
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard)](https://artifacthub.io/packages/search?repo=life-dashboard)
 
-The Life Dashboard Stack on Kubernetes: the receiver for the Life Dashboard Companion apps on Android and iOS, Postgres, Grafana with six dashboards of your health and screen time data, and an optional read-only MCP server and JSON API. Your data stays in your own cluster.
+Your phone's health data and screen time in your own cluster. The Life Dashboard Companion app on your phone sends them, signed, to this stack: a receiver, Postgres, Grafana with six dashboards, and an optional read-only MCP server and JSON API. No cloud account in between.
+
+![How it works: the Android and iPhone apps send HMAC-signed JSON to the receiver, which writes to Postgres; Grafana reads it as grafana_ro, and the optional API and MCP server as dash_ro](https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/how-it-works.png)
+
+## Start with the app
+
+The stack only stores what a phone sends, so install the app first:
+
+- **Android** (Health Connect and screen time per app): [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app), from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest) or [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app). F-Droid and Google Play are on their way.
+- **iPhone** (Apple Health): [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios), built with Xcode for now.
+
+Then pair it with the receiver, see [Pair a phone](#pair-a-phone). Already on Home Assistant? The [integration](https://github.com/owen282000/life-dashboard-ha) takes the same app.
 
 ## Prerequisites
 
