@@ -103,6 +103,8 @@ kubectl -n life-dashboard exec deploy/lifedash-life-dashboard-receiver -- python
 
 `--mcp-url http://<mcp service>:8090` adds the MCP server's `/health` and its refusal without a token, `--json` prints the results as JSON.
 
+To look around inside the receiver or the MCP server yourself, open `sh`, not `bash`: the images are built on Alpine, which has no `bash`, and they have no `pip` either. For example `docker compose exec receiver sh`, or `kubectl -n life-dashboard exec -it deploy/lifedash-life-dashboard-receiver -- sh`.
+
 ## Backups
 
 A year of health data deserves a copy somewhere else. One line writes a dump:
