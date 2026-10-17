@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-17
+
 ### Security
 
 - The receiver and MCP server images are built on Alpine (`python:3.14.8-alpine`) instead of Debian (`python:3.14.8-slim`), and no longer carry pip. Trivy found 48 high-severity vulnerabilities in each 1.1.0 image: 44 in Debian packages the stack never uses, such as util-linux, with no fix available, and 4 in the packages pip bundles, such as urllib3. In the new images it finds none, of any severity, and the download shrinks from 54 to 28 MB for the receiver and from 67 to 42 MB for the MCP server. Python, the commands such as `python pairing.py` and `python doctor.py`, and the healthchecks stay the same; a shell in these containers is `sh`, not `bash`.
@@ -88,7 +90,8 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.1...HEAD
+[1.1.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...1.1.0
 [1.0.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/owen282000/life-dashboard-stack/releases/tag/1.0.0
