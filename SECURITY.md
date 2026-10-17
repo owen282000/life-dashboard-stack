@@ -21,7 +21,7 @@ A signed payload it took is answered with a 200 that names the request's own sig
 
 Please do not open a public issue for a security vulnerability.
 
-Report it through [GitHub's private vulnerability reporting](https://github.com/owen282000/life-dashboard-stack/security/advisories/new) for this repository. If you do not have a GitHub account, email owenvogelaar@hotmail.com instead, with "Security" in the subject.
+Report it through [GitHub's private vulnerability reporting](https://github.com/owen282000/life-dashboard-stack/security/advisories/new) for this repository. If you do not have a GitHub account, email owen282000@hotmail.com instead, with "Security" in the subject.
 
 Useful in a report: the stack version, whether it runs on Docker Compose, Podman or the Helm chart, what an attacker needs (a position on the network, the webhook URL, a token, access to the host), and the steps to reproduce it.
 
