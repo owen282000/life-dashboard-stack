@@ -205,7 +205,7 @@ Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.4. Versions are pinned i
 
 **Reference:** [SQL views](docs/views.md) · [API](docs/api.md) · [MCP server](docs/mcp.md) · [What a version keeps stable](docs/compatibility.md) · [Helm chart](charts/life-dashboard/README.md)
 
-**Project:** [Upgrades, backups and security](docs/operations.md) · [Build from source](docs/operations.md#build-from-source) · [Changelog](CHANGELOG.md) · [Releasing](docs/releasing.md)
+**Project:** [Upgrades, backups and security](docs/operations.md) · [Build from source](docs/operations.md#build-from-source) · [Changelog](CHANGELOG.md) · [Releasing](docs/releasing.md) · [Security policy](SECURITY.md)
 
 <a id="build-from-source"></a>
 
