@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Your phone's health data and screen time in your own Postgres and Grafana.</b><br>
-  The backend for the Life Dashboard Companion apps: Docker Compose or Kubernetes, six dashboards, an MCP server for the AI you choose, no cloud.
+  The backend for the Life Dashboard Companion apps: six Grafana dashboards and an MCP server with eight read-only tools for Claude or a local model. Docker Compose or Kubernetes, no cloud.
 </p>
 
 <p align="center">
@@ -37,6 +37,10 @@
 </p>
 
 <p align="center">
+  <sub>Life Dashboard: <a href="https://github.com/owen282000/life-dashboard-companion-app">Android app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-companion-app-ios">iPhone app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-ha">Home Assistant integration</a> &nbsp;·&nbsp; <b>Grafana stack</b></sub>
+</p>
+
+<p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/readme-hero-phone.png">
     <img src="docs/readme-hero.png" alt="The Life Dashboard overview in Grafana with sample data: tiles for steps today, last night's sleep, overnight low heart rate, weight, screen time and the last sync, a table of the last 7 days against the 28 before, steps per day with a goal line, sleep stages per night and an hourly heart rate band" width="900">
@@ -44,9 +48,9 @@
   <br><sub>Sample data</sub>
 </p>
 
-The [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) app sends Health Connect data and screen time per app from an Android phone to a webhook, and its [iPhone version](https://github.com/owen282000/life-dashboard-companion-app-ios) does the same with Apple Health. This repository is the other end. One `docker compose up` starts a receiver, a Postgres database and Grafana with six dashboards on your own machine.
+The [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) apps send Health Connect data and screen time per app from an Android phone, or Apple Health from an [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios), to a webhook. This repository is the other end. One command starts a receiver that checks every signature, Postgres with your records in plain SQL, Grafana with six dashboards, and an optional MCP server so the AI you choose can answer questions about your own history.
 
-It's for people who want their records in SQL rather than in Home Assistant. Treat it as a starting point you can change: it's offered as-is, not as a finished product.
+It's for people who want their records in a database they can query, next to Home Assistant or instead of it. With a local model nothing leaves your machine. It's a one-person project offered as-is and built to be changed: the views, the dashboards and the receiver are yours to adapt.
 
 ## What you get
 
@@ -57,7 +61,7 @@ It's for people who want their records in SQL rather than in Home Assistant. Tre
 - **Pairing with a QR code.** The receiver shows a code that the app scans, so you type neither the address nor the secret.
 - **Every phone in your household.** Android phones and iPhones send to the same database, and each shows up as its own **Phone** in the dashboards.
 - **Your data back out.** A read-only JSON API for scripts, widgets and home screens, off until you set a token.
-- **Images, not a build.** Every part is an image on `ghcr.io` for amd64 and arm64, for Docker Compose or the Helm chart. Within a major version, nothing you build on changes.
+- **Images, not a build.** Every part is an image on `ghcr.io` for amd64 and arm64 (so a Raspberry Pi with a 64-bit OS can run them), for Docker Compose or the Helm chart. Within a major version, nothing you build on changes.
 
 <p align="center">
   <picture>
@@ -95,7 +99,7 @@ The data can also go to an MQTT broker or a webhook of your own instead. Both ap
 
 ## Quick start
 
-You need Docker with Compose, or Podman, and a phone that can reach this machine (the same network, or a VPN).
+You need Docker with Compose, or Podman, and a phone that can reach this machine (the same network, or a VPN). With a year of sample data for two phones (235,000 records), the stack used about 450 MB of memory while every dashboard loaded, 520 MB with the MCP server, and 530 MB on disk: 210 MB of data and 320 MB of Postgres write-ahead log. The images are about 650 MB to download, most of it Grafana. Pairing with a QR code needs the Android app 1.16.0 or the iPhone app 1.4.0 or newer.
 
 <a id="pair-the-app"></a>
 
@@ -103,6 +107,14 @@ You need Docker with Compose, or Podman, and a phone that can reach this machine
 
    ```bash
    curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh
+   ```
+
+   Prefer to read it first? Download it, read it, then run it:
+
+   ```bash
+   curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh
+   less install.sh
+   sh install.sh
    ```
 
 2. In the app, open the **Webhook** card on the **Health** tab, tap **Scan a pairing code** and scan the code in your terminal. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
@@ -120,7 +132,7 @@ curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/d
 RECEIVER_PORT=18080 GRAFANA_PORT=13000 docker compose -p lifedash-demo --profile demo up -d
 ```
 
-Then open `http://localhost:13000` and log in as `admin` with the password `lifedash`. [Try it without a phone](docs/install.md#try-it-without-a-phone) has the full steps and how to remove it again.
+Then open `http://localhost:13000` and log in as `admin` with the password `lifedash`. [Try it without a phone](docs/install.md#try-it-without-a-phone) has the full steps and how to remove it again. To try the MCP server on the same made-up data, put `MCP_TOKEN=$(openssl rand -hex 32)` in front of the command and add `--profile mcp`, then connect your MCP client to `http://localhost:8090/mcp` with that token.
 
 ## Dashboards
 
@@ -178,7 +190,9 @@ A Helm chart runs the same images on a cluster of your own, with Postgres throug
 
 ## Upgrading
 
-Set `LIFEDASH_VERSION` in `.env` to a newer release, or to `1` to follow every 1.x release, then run `docker compose pull && docker compose up -d`. Coming from a version before 1.0.0, which ran Postgres 16? The database won't start until one script moves your data over: see [Upgrading from a version before 1.0.0](docs/operations.md#upgrading-from-a-version-before-100). [Backups](docs/operations.md#backups) are one `pg_dump` line.
+Set `LIFEDASH_VERSION` in `.env` to a newer release, or to `1` to follow every 1.x release, then run `docker compose pull && docker compose up -d`. Coming from a version before 1.0.0, which ran Postgres 16? The database won't start until one script moves your data over: see [Upgrading from a version before 1.0.0](docs/operations.md#upgrading-from-a-version-before-100). A backup is one line: `docker compose exec -T db pg_dump -U lifedash -Fc lifedash > lifedash-$(date +%F).dump`. [Backups](docs/operations.md#backups) covers restoring.
+
+Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.4. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 
 ## Exposing it safely
 
@@ -187,17 +201,6 @@ Set `WEBHOOK_SECRET`, so only your phones can send data. The receiver speaks pla
 ## Known gaps
 
 Series the Android app sends per time window are stored, but only the heart rate panels read them so far, so leave **Data Resolution** on **Every record**, the default. [Known gaps](docs/operations.md#known-gaps) lists the rest.
-
-## Works with
-
-<p align="center">
-  <a href="https://github.com/owen282000/life-dashboard-companion-app"><img src="docs/family/android.png" alt="Android app: Health Connect and screen time" width="400"></a>
-  <a href="https://github.com/owen282000/life-dashboard-companion-app-ios"><img src="docs/family/ios.png" alt="iPhone app: Apple Health" width="400"></a>
-</p>
-
-Current versions: Android app 1.23.0, iPhone app 1.6.0. Pairing with a QR code needs at least 1.16.0 of the Android app or 1.4.0 of the iPhone app.
-
-Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.4. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 
 ## Documentation
 
@@ -213,7 +216,7 @@ Tested on Docker 29 with Postgres 18.6 and Grafana 13.2.4. Versions are pinned i
 
 Found a bug in the stack? Open an [issue](https://github.com/owen282000/life-dashboard-stack/issues) here. Questions about the apps go to the Android app's [Discussions](https://github.com/owen282000/life-dashboard-companion-app/discussions).
 
-Pull requests are welcome. [Build from source](docs/operations.md#build-from-source) builds the images from a clone and runs the tests.
+Pull requests are welcome. The receiver and the MCP server are Python, the views SQL, and [Build from source](docs/operations.md#build-from-source) builds the images from a clone and runs the tests.
 
 ## Support the project
 
