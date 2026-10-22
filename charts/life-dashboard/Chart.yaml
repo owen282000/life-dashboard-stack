@@ -9,8 +9,8 @@ type: application
 # One version for the whole stack: the chart, the four images it runs and docker-compose.yml
 # all carry the release version. scripts/prepare-release.sh sets these two lines and the
 # images in artifacthub.io/images below, and a release tag must equal them.
-version: 1.1.2
-appVersion: "1.1.2"
+version: 1.2.0
+appVersion: "1.2.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/owen282000/life-dashboard-stack
 sources:
@@ -31,26 +31,30 @@ maintainers:
 # Artifact Hub would otherwise take them from a dry run with the default values, which leave
 # out the MCP server.
 annotations:
-  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/containsSecurityUpdates: "true"
   artifacthub.io/changes: |
-    - kind: changed
-      description: "The pairing block, in the receiver's log, from `python pairing.py` and from the installer, names the `/pair` page by its full address, such as `http://192.168.1.10:8080/pair?label=<label>`, built from `PUBLIC_URL`, and says when it needs `&token=`. With `PAIRING_PAGE=0`, as on Kubernetes by default and under a rootless engine, it points to `python pairing.py <label>` instead. The installer's summary lists the page under **Pairing**."
-    - kind: fixed
-      description: "The apps' pairing test now reports the stack as confirmed. The iPhone app said \"Delivered, but the Life Dashboard integration did not answer\" after pairing with the stack, because it counts a test ping as confirmed only when the answer names the request's signature, as the Home Assistant integration's answer does. With `WEBHOOK_SECRET` set, the receiver now answers every payload it takes with `life_dashboard` (`receiver` and `version`) and `writeback.in_reply_to`, signed with a key derived from the secret, in the same way. It announces no write-back protocol, so the apps still take no measurements from it, and a refusal or a receiver without a secret answers as before. docs/compatibility.md has the format."
+    - kind: security
+      description: "A new stack is no longer open by default. A `docker compose up` without `install.sh` used to start a receiver that stored unsigned payloads from anyone who could reach it, with a Grafana `admin` password of `lifedash` and the read-only database roles on `lifedash-ro` and `lifedash-dash-ro`, all on every network interface. Now a new install, meaning a database the receiver never set up and an empty Grafana volume, starts only with `WEBHOOK_SECRET` set and with `GRAFANA_PASSWORD`, `GRAFANA_DB_PASSWORD` and `DASH_DB_PASSWORD` of your own. Until then the receiver and Grafana stop with a line in their log that names the setting. `install.sh` and the Helm chart already set all of them, so nothing changes there."
+    - kind: security
+      description: "A stack that already has its data starts as before, with the `.env` it has, as docs/compatibility.md promises for 1.x. Without a secret it keeps storing unsigned payloads and saying so at every start; `doctor` reports that as a failure and an old default password as a warning."
+    - kind: security
+      description: "`ALLOW_UNSIGNED=1` is the way to start a new stack without a secret on purpose. `.env.example` no longer carries the old passwords, and says how to keep Grafana or the MCP server on the machine itself (`GRAFANA_PORT=127.0.0.1:3000`). The receiver stays on every interface, since the phones reach it over your network."
+    - kind: security
+      description: "The demo in the README and in docs/install.md writes a `.env` with its own secret and passwords first; its Grafana password is `demo-admin`."
   artifacthub.io/license: MIT
   artifacthub.io/category: monitoring-logging
   artifacthub.io/images: |
     - name: receiver
-      image: ghcr.io/owen282000/life-dashboard-receiver:1.1.2
+      image: ghcr.io/owen282000/life-dashboard-receiver:1.2.0
       platforms: [linux/amd64, linux/arm64]
     - name: grafana
-      image: ghcr.io/owen282000/life-dashboard-grafana:1.1.2
+      image: ghcr.io/owen282000/life-dashboard-grafana:1.2.0
       platforms: [linux/amd64, linux/arm64]
     - name: db
-      image: ghcr.io/owen282000/life-dashboard-db:1.1.2
+      image: ghcr.io/owen282000/life-dashboard-db:1.2.0
       platforms: [linux/amd64, linux/arm64]
     - name: mcp
-      image: ghcr.io/owen282000/life-dashboard-mcp:1.1.2
+      image: ghcr.io/owen282000/life-dashboard-mcp:1.2.0
       platforms: [linux/amd64, linux/arm64]
   artifacthub.io/links: |
     - name: Android app

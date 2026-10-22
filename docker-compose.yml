@@ -9,7 +9,7 @@
 
 services:
   db:
-    image: ghcr.io/owen282000/life-dashboard-db:${LIFEDASH_VERSION:-1.1.2}
+    image: ghcr.io/owen282000/life-dashboard-db:${LIFEDASH_VERSION:-1.2.0}
     # The image's entrypoint refuses to start while an old Postgres 16 volume still holds
     # the data.
     environment:
@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
 
   receiver:
-    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.1.2}
+    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.2.0}
     environment:
       DATABASE_URL: postgresql://lifedash:lifedash@db:5432/lifedash
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: ghcr.io/owen282000/life-dashboard-grafana:${LIFEDASH_VERSION:-1.1.2}
+    image: ghcr.io/owen282000/life-dashboard-grafana:${LIFEDASH_VERSION:-1.2.0}
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-lifedash}
@@ -86,7 +86,7 @@ services:
   # Sample data for two phones (demo-android and demo-iphone). Only with --profile demo.
   demo:
     profiles: ["demo"]
-    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.1.2}
+    image: ghcr.io/owen282000/life-dashboard-receiver:${LIFEDASH_VERSION:-1.2.0}
     command: ["python", "tools/sample_data.py"]
     environment:
       URL: http://receiver:8080
@@ -100,7 +100,7 @@ services:
   # Read-only MCP server for a model of your choice. Only with --profile mcp. docs/mcp.md
   mcp:
     profiles: ["mcp"]
-    image: ghcr.io/owen282000/life-dashboard-mcp:${LIFEDASH_VERSION:-1.1.2}
+    image: ghcr.io/owen282000/life-dashboard-mcp:${LIFEDASH_VERSION:-1.2.0}
     init: true
     environment:
       MCP_TOKEN: ${MCP_TOKEN:-}

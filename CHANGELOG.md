@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-22
+
 ### Security
 
 - A new stack is no longer open by default. A `docker compose up` without `install.sh` used to start a receiver that stored unsigned payloads from anyone who could reach it, with a Grafana `admin` password of `lifedash` and the read-only database roles on `lifedash-ro` and `lifedash-dash-ro`, all on every network interface. Now a new install, meaning a database the receiver never set up and an empty Grafana volume, starts only with `WEBHOOK_SECRET` set and with `GRAFANA_PASSWORD`, `GRAFANA_DB_PASSWORD` and `DASH_DB_PASSWORD` of your own. Until then the receiver and Grafana stop with a line in their log that names the setting. `install.sh` and the Helm chart already set all of them, so nothing changes there.
@@ -107,7 +109,8 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.2...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.0...HEAD
+[1.2.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.2...1.2.0
 [1.1.2]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.1...1.1.2
 [1.1.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...1.1.1
 [1.1.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.0.1...1.1.0
