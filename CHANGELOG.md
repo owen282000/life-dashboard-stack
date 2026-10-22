@@ -4,6 +4,13 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Security
+
+- A new stack is no longer open by default. A `docker compose up` without `install.sh` used to start a receiver that stored unsigned payloads from anyone who could reach it, with a Grafana `admin` password of `lifedash` and the read-only database roles on `lifedash-ro` and `lifedash-dash-ro`, all on every network interface. Now a new install, meaning a database the receiver never set up and an empty Grafana volume, starts only with `WEBHOOK_SECRET` set and with `GRAFANA_PASSWORD`, `GRAFANA_DB_PASSWORD` and `DASH_DB_PASSWORD` of your own. Until then the receiver and Grafana stop with a line in their log that names the setting. `install.sh` and the Helm chart already set all of them, so nothing changes there.
+- A stack that already has its data starts as before, with the `.env` it has, as [docs/compatibility.md](docs/compatibility.md#the-environment-variables) promises for 1.x. Without a secret it keeps storing unsigned payloads and saying so at every start; `doctor` reports that as a failure and an old default password as a warning.
+- `ALLOW_UNSIGNED=1` is the way to start a new stack without a secret on purpose. `.env.example` no longer carries the old passwords, and says how to keep Grafana or the MCP server on the machine itself (`GRAFANA_PORT=127.0.0.1:3000`). The receiver stays on every interface, since the phones reach it over your network.
+- The demo in the README and in [docs/install.md](docs/install.md#try-it-without-a-phone) writes a `.env` with its own secret and passwords first; its Grafana password is `demo-admin`.
+
 ## [1.1.2] - 2026-10-17
 
 ### Changed

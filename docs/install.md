@@ -79,7 +79,7 @@ Something wrong afterwards? The same line with `-s -- doctor` [checks the instal
    curl -fsSL -o .env https://github.com/owen282000/life-dashboard-stack/releases/latest/download/env.example
    ```
 
-2. Open `.env` and set the secret, your time zone and the two passwords, as described below.
+2. Open `.env` and set the secret, your time zone and the three passwords, as described below.
 3. Start it:
 
    ```bash
@@ -88,12 +88,13 @@ Something wrong afterwards? The same line with `-s -- doctor` [checks the instal
 
 ### The settings
 
-The installer fills these in; by hand, set them in `.env`:
+The installer fills these in; by hand, set them in `.env`. A new stack (an empty database and an empty Grafana) refuses to start until the secret and the three passwords have values of your own, and the receiver's or Grafana's log says which one is missing. A stack that already holds data starts as before.
 
 - `WEBHOOK_SECRET`: a long random string, for example the output of `openssl rand -hex 32`. You paste the same value into the app, or the pairing code carries it there.
 - `TZ`: your time zone as an IANA name, such as `Europe/Amsterdam` or `America/New_York`. Days, nights and hours in the dashboards follow it. The receiver refuses to start with a name Postgres doesn't know.
 - `GRAFANA_PASSWORD`: the password of Grafana's `admin` user.
 - `GRAFANA_DB_PASSWORD`: the password of `grafana_ro`, the read-only database user Grafana connects with.
+- `DASH_DB_PASSWORD`: the password of `dash_ro`, the read-only database user of the API and the MCP server.
 - `PUBLIC_URL`: the address your phone reaches this machine on, such as `http://192.168.1.10:8080`. It goes in the pairing code.
 
 The other settings in [.env.example](../.env.example) switch on the [API](api.md) and the [MCP server](mcp.md), set the version of the images (see [Upgrading](operations.md#upgrading)) and control the pairing code. Each has a comment.
@@ -198,10 +199,12 @@ The `demo` profile adds a one-off service that posts 60 days of made-up data for
 ```bash
 mkdir lifedash-demo && cd lifedash-demo
 curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
-RECEIVER_PORT=18080 GRAFANA_PORT=13000 docker compose -p lifedash-demo --profile demo up -d
+printf '%s\n' "WEBHOOK_SECRET=$(openssl rand -hex 32)" GRAFANA_PASSWORD=demo-admin \
+  GRAFANA_DB_PASSWORD=demo-ro DASH_DB_PASSWORD=demo-dash RECEIVER_PORT=18080 GRAFANA_PORT=13000 > .env
+docker compose -p lifedash-demo --profile demo up -d
 ```
 
-Give it a minute, then open `http://localhost:13000` and log in as `admin` with the password `lifedash` (or your `GRAFANA_PASSWORD`, if the folder already has a `.env`). Pick a **Phone** at the top of a dashboard to switch between the two. When you're done, remove all of it, volumes included:
+Give it a minute, then open `http://localhost:13000` and log in as `admin` with the password `demo-admin`. The `.env` gives the demo a secret and passwords of its own, which a new stack needs before it starts. Pick a **Phone** at the top of a dashboard to switch between the two. When you're done, remove all of it, volumes included:
 
 ```bash
 docker compose -p lifedash-demo --profile demo down -v

@@ -60,6 +60,10 @@ class Result:
 
 # ------------------------------------------------------------------ settings
 
+# The read-only roles' passwords before 1.2; a new install no longer starts with them.
+OLD_DEFAULT_PASSWORDS = {"GRAFANA_DB_PASSWORD": "lifedash-ro", "DASH_DB_PASSWORD": "lifedash-dash-ro"}
+
+
 def check_settings(env) -> list[Result]:
     """The settings that need no database: the secret, the address, the time zone, tokens."""
     out = []
@@ -93,6 +97,11 @@ def check_settings(env) -> list[Result]:
     if token and len(token) < pairing.MIN_TOKEN:
         out.append(Result(WARN, "PAIRING_TOKEN", f"shorter than {pairing.MIN_TOKEN} characters, so it is ignored",
                           "use a longer one, or leave it empty"))
+    for name, default in OLD_DEFAULT_PASSWORDS.items():
+        if name in env and (env[name] or default) == default:
+            out.append(Result(WARN, name, f"the old default ({default}), the same in every stack that kept it",
+                              f"set {name} in .env to the output of openssl rand -hex 16, then docker compose up -d "
+                              "(the receiver sets the new password at start)"))
     return out
 
 

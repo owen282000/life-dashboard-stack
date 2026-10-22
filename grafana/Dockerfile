@@ -24,3 +24,5 @@ RUN find /usr/share/grafana/data/plugins-bundled -mindepth 1 -maxdepth 1 \
 USER 472
 COPY grafana/provisioning /etc/grafana/provisioning
 COPY grafana/dashboards /etc/grafana/dashboards
+COPY grafana/start.sh /usr/local/bin/lifedash-grafana-start
+ENTRYPOINT ["/usr/local/bin/lifedash-grafana-start"]
