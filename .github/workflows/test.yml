@@ -40,7 +40,7 @@ jobs:
         run: docker run --rm -v "$PWD:/repo" -w /repo "$ACTIONLINT_IMAGE" -color
       - name: shellcheck on the scripts and the pre-push hook
         run: |
-          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tools/*.sh .github/scripts/*.sh .githooks/pre-push install.sh
+          docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" scripts/*.sh tools/*.sh .github/scripts/*.sh .githooks/pre-push install.sh grafana/start.sh
           # install.sh promises plain POSIX sh, so dash's rules too.
           docker run --rm -v "$PWD:/mnt" -w /mnt "$SHELLCHECK_IMAGE" --shell=dash install.sh
       - name: docker compose config, with and without the build override and the profiles
@@ -175,6 +175,7 @@ jobs:
       MCP_TOKEN: ci-mcp-token-0123456789
       GRAFANA_DB_PASSWORD: ci-ro
       GRAFANA_PASSWORD: ci-admin
+      DASH_DB_PASSWORD: ci-dash-ro
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker compose up -d --build --wait db receiver grafana mcp

@@ -129,10 +129,12 @@ The `demo` profile posts 60 days of made-up data for an Android phone and an iPh
 ```bash
 mkdir lifedash-demo && cd lifedash-demo
 curl -fsSLO https://github.com/owen282000/life-dashboard-stack/releases/latest/download/docker-compose.yml
-RECEIVER_PORT=18080 GRAFANA_PORT=13000 docker compose -p lifedash-demo --profile demo up -d
+printf '%s\n' "WEBHOOK_SECRET=$(openssl rand -hex 32)" GRAFANA_PASSWORD=demo-admin \
+  GRAFANA_DB_PASSWORD=demo-ro DASH_DB_PASSWORD=demo-dash RECEIVER_PORT=18080 GRAFANA_PORT=13000 > .env
+docker compose -p lifedash-demo --profile demo up -d
 ```
 
-Then open `http://localhost:13000` and log in as `admin` with the password `lifedash`. [Try it without a phone](docs/install.md#try-it-without-a-phone) has the full steps and how to remove it again. To try the MCP server on the same made-up data, put `MCP_TOKEN=$(openssl rand -hex 32)` in front of the command and add `--profile mcp`, then connect your MCP client to `http://localhost:8090/mcp` with that token.
+Then open `http://localhost:13000` and log in as `admin` with the password `demo-admin`. A new stack starts only with a secret and passwords of its own, so the `.env` line gives the demo its own. [Try it without a phone](docs/install.md#try-it-without-a-phone) has the full steps and how to remove it again. To try the MCP server on the same made-up data, put `MCP_TOKEN=$(openssl rand -hex 32)` in front of the command and add `--profile mcp`, then connect your MCP client to `http://localhost:8090/mcp` with that token.
 
 ## Dashboards
 

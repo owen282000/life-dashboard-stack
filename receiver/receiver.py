@@ -52,6 +52,7 @@ PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip()
 PAIRING_LOG = pairing.is_on(os.environ.get("PAIRING_LOG"))
 PAIRING_PAGE = pairing.is_on(os.environ.get("PAIRING_PAGE"))
 PAIRING_TOKEN = os.environ.get("PAIRING_TOKEN", "").strip()
+ALLOW_UNSIGNED = pairing.is_on(os.environ.get("ALLOW_UNSIGNED"), default=False)
 
 MAX_BODY = 32 * 1024 * 1024
 LABEL_RE = re.compile(r"^/webhook(?:/([a-z0-9_-]{1,32}))?$")
@@ -521,6 +522,32 @@ def setup_database(dsn: str, tz: str, ro_password: str) -> None:
             conn.execute("SELECT pg_advisory_unlock(%s)", (MIGRATION_LOCK,))
 
 
+# The passwords the read-only roles had as defaults before 1.2. An existing database keeps
+# them; a new one starts only with passwords of its own.
+DEFAULT_PASSWORDS = {"GRAFANA_DB_PASSWORD": "lifedash-ro", "DASH_DB_PASSWORD": "lifedash-dash-ro"}
+
+
+def is_new_database(dsn: str) -> bool:
+    """True while the receiver has never set this database up (no migration applied yet)."""
+    with psycopg.connect(dsn, connect_timeout=5) as conn:
+        return conn.execute("SELECT to_regclass('public.schema_migrations')").fetchone()[0] is None
+
+
+def new_install_problems(env, allow_unsigned: bool) -> list[str]:
+    """What a new install must set before its first start. An existing database starts as before."""
+    problems = []
+    if not env.get("WEBHOOK_SECRET", "") and not allow_unsigned:
+        problems.append("WEBHOOK_SECRET is empty. Set it to the output of openssl rand -hex 32, and enter "
+                        "the same secret in the app (or pair with the QR code). To store unsigned "
+                        "payloads anyway, set ALLOW_UNSIGNED=1.")
+    for name, default in DEFAULT_PASSWORDS.items():
+        # Absent means the roles are managed elsewhere (CloudNativePG); only a value counts.
+        if name in env and (env[name] or default) == default:
+            problems.append(f"{name} is the old default ({default}). Set it to a password of your own, "
+                            "such as the output of openssl rand -hex 16.")
+    return problems
+
+
 def secret_warning(secret: str) -> str | None:
     if secret:
         return None
@@ -683,6 +710,10 @@ def main() -> None:
           flush=True)
     try:
         wait_for_db(DB_DSN)
+        problems = new_install_problems(os.environ, ALLOW_UNSIGNED)
+        if problems and is_new_database(DB_DSN):
+            raise SetupError("a new install needs these settings first (in .env, then "
+                             "docker compose up -d):\n- " + "\n- ".join(problems))
         setup_database(DB_DSN, TZ, GRAFANA_DB_PASSWORD)
     except SetupError as exc:
         log(f"receiver cannot start: {exc}")

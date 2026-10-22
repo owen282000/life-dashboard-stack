@@ -27,8 +27,21 @@ def statuses(results):
 # ------------------------------------------------------------------ settings
 
 def test_healthy_settings_pass():
-    got = statuses(doctor.check_settings(HEALTHY_ENV))
+    got = statuses(doctor.check_settings({**HEALTHY_ENV, "DASH_DB_PASSWORD": "a-password-of-its-own"}))
     assert got == {"WEBHOOK_SECRET": "PASS", "PUBLIC_URL": "PASS", "TZ": "PASS"}
+
+
+@pytest.mark.parametrize("name, value", [("GRAFANA_DB_PASSWORD", "lifedash-ro"), ("GRAFANA_DB_PASSWORD", ""),
+                                         ("DASH_DB_PASSWORD", "lifedash-dash-ro")])
+def test_an_old_default_password_is_a_warning(name, value):
+    env = {**HEALTHY_ENV, "DASH_DB_PASSWORD": "own", name: value}
+    result = by_name(doctor.check_settings(env))[name]
+    assert result.status == "WARN" and "openssl rand" in result.fix
+
+
+def test_a_role_password_managed_elsewhere_is_not_judged():
+    env = {k: v for k, v in HEALTHY_ENV.items() if k not in ("GRAFANA_DB_PASSWORD", "DASH_DB_PASSWORD")}
+    assert "DASH_DB_PASSWORD" not in statuses(doctor.check_settings(env))
 
 
 @pytest.mark.parametrize("secret, status", [("", "FAIL"), ("has a space", "FAIL"), ("x" * 600, "FAIL"),

@@ -33,6 +33,8 @@ services:
     environment:
       DATABASE_URL: postgresql://lifedash:lifedash@db:5432/lifedash
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      # A new install refuses to start without WEBHOOK_SECRET unless this is 1. .env.example
+      ALLOW_UNSIGNED: ${ALLOW_UNSIGNED:-0}
       TZ: ${TZ:-UTC}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-lifedash-ro}
       PUBLIC_URL: ${PUBLIC_URL:-}

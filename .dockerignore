@@ -17,3 +17,4 @@
 !tools/upgrade-postgres.sh
 !grafana/provisioning/
 !grafana/dashboards/
+!grafana/start.sh
