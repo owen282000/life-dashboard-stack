@@ -26,6 +26,8 @@ Linux and macOS both work; on Windows, run it in WSL2.
 
 On the phone: Life Dashboard Companion for [Android](https://github.com/owen282000/life-dashboard-companion-app) 1.23.0 or the [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios) version 1.6.0. Pairing with a QR code needs 1.16.0 or newer on Android, or 1.4.0 or newer on iPhone.
 
+Get the Android app from [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme), the easy way with automatic updates, or for free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) or [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/): the same app, with the same signature. The iPhone app is on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8).
+
 ## Install
 
 ### With one line

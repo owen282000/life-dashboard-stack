@@ -88,6 +88,8 @@ The phone pushes signed JSON to you. There's no cloud account in between, so the
 
 Life Dashboard is four projects, and you only install the parts you need. Put the app on each phone, then pick where the data goes. Both apps send the same payload, so an Android phone and an iPhone can share one Home Assistant or one stack.
 
+On Android, [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme) is the easy way: a one-time purchase, with automatic updates, that supports development. The same app stays free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/), with the same signature. On an iPhone, the app is on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8).
+
 <p align="center">
   <a href="https://github.com/owen282000/life-dashboard-companion-app"><img src="docs/family/android.png" alt="Android app: Health Connect and screen time" width="400"></a>
   <a href="https://github.com/owen282000/life-dashboard-companion-app-ios"><img src="docs/family/ios.png" alt="iPhone app: Apple Health" width="400"></a>
