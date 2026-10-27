@@ -10,8 +10,8 @@ Your phone's health data and screen time in your own cluster. The Life Dashboard
 
 The stack only stores what a phone sends, so install the app first:
 
-- **Android** (Health Connect and screen time per app): [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app), from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest) or [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app). F-Droid and Google Play are on their way.
-- **iPhone** (Apple Health): [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios), built with Xcode for now.
+- **Android** (Health Connect and screen time per app): [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app), the easy way from [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme): a one-time purchase, with automatic updates, that supports development. The same app stays free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/), with the same signature.
+- **iPhone** (Apple Health): [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios), on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8) as a one-time purchase, or [build it yourself with Xcode](https://github.com/owen282000/life-dashboard-companion-app-ios#build-and-install).
 
 Then pair it with the receiver, see [Pair a phone](#pair-a-phone). Already on Home Assistant? The [integration](https://github.com/owen282000/life-dashboard-ha) takes the same app.
 
