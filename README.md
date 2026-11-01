@@ -55,7 +55,7 @@ It's for people who want their records in a database they can query, next to Hom
 ## What you get
 
 - **Every record, checked and kept once.** The receiver checks the HMAC signature and stores every record in Postgres. A payload that arrives twice is applied once, a late one can't overwrite a newer one, and records you delete on the phone are deleted here too.
-- **One table, plain SQL views.** All 33 record types of the Android app and the 28 of the iPhone app fit in one `records` table. The `dash` views turn them into days, nights, hours and apps in your time zone.
+- **One table, plain SQL views.** All 34 record types of the Android app and the 28 of the iPhone app fit in one `records` table. The `dash` views turn them into days, nights, hours and apps in your time zone.
 - **Six dashboards.** An overview as the home page, then Activity, Sleep, Heart and body, Screen time, and Data and sync. Grafana reads as a user that can only `SELECT`.
 - **Ask your own AI.** An optional MCP server lets Claude, a local model in Ollama or any other MCP client answer questions such as "did I sleep better in the weeks I walked more?" from your own history, with read-only tools only. It stays off until you set a token.
 - **Pairing with a QR code.** The receiver shows a code that the app scans, so you type neither the address nor the secret.
