@@ -4,6 +4,11 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Security
+
+- The database image takes in Alpine's latest packages when it is built, which fixes CVE-2026-111497 in `brotli-libs` and CVE-2026-92392 in `libcurl`.
+- Grafana 13.3.0.
+
 ## [1.2.0] - 2026-10-22
 
 ### Security

@@ -10,8 +10,10 @@ LABEL org.opencontainers.image.title="Life Dashboard database" \
 # The official entrypoint drops from root to postgres with `gosu postgres ...`. gosu is built
 # with an old Go and carries its known vulnerabilities; Alpine's su-exec does the same as a
 # small C program, so the entrypoint calls su-exec instead and gosu goes. The grep fails the
-# build if a newer base image calls gosu in a way this does not catch.
-RUN apk add --no-cache su-exec \
+# build if a newer base image calls gosu in a way this does not catch. The upgrade takes in
+# Alpine's security fixes when the base image has not been rebuilt with them yet.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache su-exec \
     && sed -i 's/exec gosu postgres /exec su-exec postgres /' \
         /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh \
     && rm /usr/local/bin/gosu \
