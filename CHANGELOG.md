@@ -4,6 +4,8 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-01
+
 ### Security
 
 - The database image takes in Alpine's latest packages when it is built, which fixes CVE-2026-111497 in `brotli-libs` and CVE-2026-92392 in `libcurl`.
@@ -114,7 +116,8 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.1...HEAD
+[1.2.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.2...1.2.0
 [1.1.2]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.1...1.1.2
 [1.1.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.0...1.1.1
