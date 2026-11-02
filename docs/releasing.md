@@ -69,6 +69,6 @@ Dependabot updates the GitHub Actions, the Dockerfiles' base images and the Pyth
 - **Barman Cloud plugin** (`v0.15.1`) and **cert-manager** (`v1.21.2`): [kubernetes.md](kubernetes.md).
 - **CloudNativePG Postgres image** (`18.6-standard-trixie`): `postgres.cnpg.imageName` in [values.yaml](../charts/life-dashboard/values.yaml) and [kubernetes.md](kubernetes.md). Keep it on the same Postgres minor as [db/Dockerfile](../db/Dockerfile).
 - **Tools in the workflows**: Helm 4 and Helm 3 (`env` in test.yml and `HELM_VERSION` in [release.yml](../.github/workflows/release.yml)), chart-testing, kind, the `kindest/node` image, Calico, and the kubeconform, actionlint and shellcheck images, all in the `env` of test.yml.
-- **Python** (`3.14.8`): `python-version` in test.yml, equal to the Dockerfiles of the receiver and the MCP server.
+- **Python** (`3.15.0`): `python-version` in test.yml, equal to the Dockerfiles of the receiver and the MCP server.
 - **ORAS** (`1.3.4`): `ORAS_VERSION` and its `ORAS_SHA256` (of `oras_<version>_linux_amd64.tar.gz`) in the chart job of release.yml.
 - **mcp-publisher** (`v1.8.1`): `MCP_PUBLISHER_VERSION` and its `MCP_PUBLISHER_SHA256` (of `mcp-publisher_linux_amd64.tar.gz`, from the release's checksums file) in release.yml. The registry refuses an `mcp-publisher` that is too old with `invalid audience`.
