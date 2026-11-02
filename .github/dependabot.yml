@@ -51,20 +51,19 @@ updates:
       prefix: "build"
       include: "scope"
 
-  # The receiver's pinned packages, and pytest for its tests
+  # The pinned packages of the receiver and the MCP server, and pytest for their tests. One group,
+  # because the tests install both requirements files together and they share pins such as pytest
+  # and psycopg: one bump per directory can never pass on its own.
   - package-ecosystem: "pip"
-    directory: "/receiver"
+    directories:
+      - "/receiver"
+      - "/mcp"
     schedule:
       interval: "weekly"
     commit-message:
       prefix: "build"
       include: "scope"
-
-  # The MCP server's pinned packages, and pytest for its tests
-  - package-ecosystem: "pip"
-    directory: "/mcp"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "build"
-      include: "scope"
+    groups:
+      python-packages:
+        patterns:
+          - "*"
