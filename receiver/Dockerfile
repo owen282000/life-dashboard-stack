@@ -3,7 +3,7 @@
 # Alpine, not Debian slim: slim carries util-linux, ncurses, perl and systemd libraries with
 # known vulnerabilities that have no fix, and Python here needs none of them. Alpine has tzdata
 # for zoneinfo, and sh but no bash.
-FROM python:3.14.8-alpine
+FROM python:3.15.0-alpine
 LABEL org.opencontainers.image.title="Life Dashboard receiver" \
       org.opencontainers.image.description="Takes signed payloads from the Life Dashboard Companion apps and stores them in Postgres" \
       org.opencontainers.image.source="https://github.com/owen282000/life-dashboard-stack" \

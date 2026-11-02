@@ -4,6 +4,10 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Changed
+
+- The receiver and the MCP server run on Python 3.15.0.
+
 ## [1.2.1] - 2026-11-01
 
 ### Security
