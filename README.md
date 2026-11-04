@@ -119,7 +119,7 @@ You need Docker with Compose, or Podman, and a phone that can reach this machine
    sh install.sh
    ```
 
-2. In the app, open the **Webhook** card on the **Health** tab, tap **Scan a pairing code** and scan the code in your terminal. Then tap **Sync Now** (on Android, on both tabs) and **Backfill** the last 90 days.
+2. In the app, tap **Scan a pairing code** and scan the code in your terminal: on Android it's on the **Webhook** card of the **Health** tab, on an iPhone under **Add destination**. Then tap **Sync Now** (on Android, on both tabs) and send the last 90 days, with **Backfill** on Android and with **Send history** under **What to send** on an iPhone.
 3. Open Grafana on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
 
 Something wrong? The same line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).

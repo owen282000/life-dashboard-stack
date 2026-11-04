@@ -141,9 +141,9 @@ The installer and the doctor work with Podman as with Docker: they find it by th
 Like the Home Assistant integration, the receiver shows a QR code that the app scans, so you type neither the address nor the secret.
 
 1. Show the code. With `PUBLIC_URL` set, it is in the receiver's log at every start: `docker compose logs receiver`. The log draws it for a dark terminal. Or open `http://<address of this machine>:8080/pair` in a browser on your own network; that page shows the same code, and without `PUBLIC_URL` it uses the address you opened it with.
-2. In the app, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**, or point the phone's camera at the code.
+2. On Android, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**. On an iPhone, tap **Add destination** on the **Health** tab, or **Use your own server** while there is no destination yet, and then **Scan a pairing code**. Or point the phone's camera at the code.
 3. Check the address the app shows and tap **Pair**. The app sends a test ping, which the receiver answers signed with the secret, so the iPhone app reports the pairing as confirmed (in the words it uses for Home Assistant). On Android, leave **Health** and **Screen Time** both on, so screen time and health data land under one **Phone**, and leave plain HTTP allowed for an `http://` address.
-4. Tap **Sync Now**, on Android on both tabs, and continue with **Backfill** as in the steps under [Connect a phone by hand](#connect-a-phone-by-hand).
+4. Tap **Sync Now**, on Android on both tabs, and send your older data as in the steps under [Connect a phone by hand](#connect-a-phone-by-hand): **Backfill** on Android, **Send history** on an iPhone.
 
 The code holds the webhook URL with the label `phone`, the secret and the name Life Dashboard Stack, in the pairing format of the Home Assistant integration. For a second phone, open `/pair?label=<label>` or use the **Another phone** field on the page: every phone needs its own label, see [Several phones](#several-phones). The log and the installer name the page's full address, such as `http://192.168.1.10:8080/pair?label=<label>`; with `PAIRING_PAGE=0` they point to `python pairing.py <label>` in the receiver's container instead. With an empty `WEBHOOK_SECRET` there is no code, because the apps refuse one without a secret; the log and the page suggest a new random one to put in `.env`.
 
@@ -169,12 +169,13 @@ The label is how the dashboards tell phones apart. Plain `/webhook` works too an
 4. On the **Screen Time** tab, add the same URL, with the same label, and the same secret. That tab has its own URL list and secret. With one label on both tabs, screen time and health data land under one **Phone**, which the screen time tile on the overview and the sleep panel on the Screen time dashboard need. Tap **Save Changes**, then **Sync Now**.
 5. Back on the **Health** tab, tap **Backfill** and pick **90d** to fill the dashboards with the last three months. If the dialog shows **Grant history access**, tap it first: without it Health Connect only hands out the last 30 days. Screen time starts with the last 7 days and grows from there.
 
-**iPhone** (Life Dashboard Companion for iOS 1.6.0):
+**iPhone** (Life Dashboard Companion for iOS 1.11.0):
 
-1. On the **Health** tab, open **Webhook**. Type the URL in the **Webhook URL** field and tap the plus button next to it.
-2. Paste the `WEBHOOK_SECRET` value under **HMAC Signing Secret**.
-3. Tap **Test ping**, then **Sync Now**. iOS asks once for access to the local network; allow it. Plain HTTP to an IP address works without a setting.
-4. Tap **Backfill** and pick **Last 90 days**. Keep the iPhone unlocked while it runs: iOS doesn't hand out Health data while it's locked.
+1. On the **Health** tab, tap **Add destination**, or **Use your own server** while there is no destination yet. Type the URL in the **Webhook URL** field and tap **Add webhook**.
+2. On the sheet that opens, paste the `WEBHOOK_SECRET` value under **HMAC Signing Secret** and tap **Save**.
+3. Under **What to send**, pick your data types and allow Apple Health access.
+4. Tap the destination on the **Health** tab, then **Send test**. Close the sheet and tap **Sync Now**. iOS asks once for access to the local network; allow it. Plain HTTP to an IP address works without a setting.
+5. Under **What to send**, tap **Send history** and pick **90 days**. Keep the iPhone unlocked while it runs: iOS doesn't hand out Health data while it's locked.
 
 ## Check that data arrives
 
