@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0
       - name: The tag, the chart, docker-compose.yml, server.json and CHANGELOG.md agree on the version
         run: .github/scripts/check-release.sh "$TAG"
-      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         with:
           version: ${{ env.HELM_VERSION }}
       - name: The chart lints, and its version is not on GHCR yet
@@ -149,7 +149,7 @@ jobs:
       ORAS_SHA256: f27adb935022d94df8dc77719c322dda592c78a0d57a6f7dcdd8d900b248c454
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         with:
           version: ${{ env.HELM_VERSION }}
       # helm registry login below is for helm push; the attestation step pushes with Docker's
