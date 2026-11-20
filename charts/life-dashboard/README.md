@@ -2,7 +2,7 @@
 
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard)](https://artifacthub.io/packages/search?repo=life-dashboard)
 
-Your phone's health data and screen time in your own cluster. The Life Dashboard Companion app on your phone sends them, signed, to this stack: a receiver, Postgres, Grafana with six dashboards, and an optional read-only MCP server and JSON API. No cloud account in between.
+Your phone's health data and screen time in your own cluster. The Life Dashboard app on your phone sends them, signed, to this stack: a receiver, Postgres, Grafana with six dashboards, and an optional read-only MCP server and JSON API. No cloud account in between.
 
 ![How it works: the Android and iPhone apps send HMAC-signed JSON to the receiver, which writes to Postgres; Grafana reads it as grafana_ro, and the optional API and MCP server as dash_ro](https://raw.githubusercontent.com/owen282000/life-dashboard-stack/main/docs/how-it-works.png)
 
@@ -10,10 +10,10 @@ Your phone's health data and screen time in your own cluster. The Life Dashboard
 
 The stack only stores what a phone sends, so install the app first:
 
-- **Android** (Health Connect and screen time per app): [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app), the easy way from [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme): a one-time purchase, with automatic updates, that supports development. The same app stays free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/), with the same signature.
-- **iPhone** (Apple Health): [Life Dashboard Companion for iOS](https://github.com/owen282000/life-dashboard-companion-app-ios), on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8) as a one-time purchase, or [build it yourself with Xcode](https://github.com/owen282000/life-dashboard-companion-app-ios#build-and-install).
+- **Android** (Health Connect and screen time per app): [Life Dashboard for Android](https://github.com/owen282000/life-dashboard-companion-app), the easy way from [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme): €4.99 (US$4.99) once, with automatic updates, and it supports development. The same app stays free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/), with the same signature.
+- **iPhone** (Apple Health): [Life Dashboard for iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios), on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8) for €6.99 (US$5.99) once, or [build it yourself with Xcode](https://github.com/owen282000/life-dashboard-companion-app-ios#build-and-install).
 
-Then pair it with the receiver, see [Pair a phone](#pair-a-phone). Already on Home Assistant? The [integration](https://github.com/owen282000/life-dashboard-ha) takes the same app.
+Both stores list it as Health Data for Home Assistant. Then pair it with the receiver, see [Pair a phone](#pair-a-phone). Already on Home Assistant? The [integration](https://github.com/owen282000/life-dashboard-ha) takes the same app.
 
 ## Prerequisites
 
