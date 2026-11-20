@@ -15,7 +15,7 @@
   <a href="docs/kubernetes.md"><img src="https://img.shields.io/badge/Helm-chart-0F1689" alt="Helm chart for Kubernetes"></a>
   <a href="https://artifacthub.io/packages/search?repo=life-dashboard"><img src="https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard" alt="Artifact Hub"></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Postgres-18-4169E1" alt="Postgres 18"></a>
-  <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-13.2-F46800" alt="Grafana 13.2"></a>
+  <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-13.3-F46800" alt="Grafana 13.3"></a>
   <a href="docs/mcp.md"><img src="https://img.shields.io/badge/MCP-server-6E56CF" alt="MCP server"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT license"></a>
 </p>
@@ -37,7 +37,7 @@
 </p>
 
 <p align="center">
-  <sub>Life Dashboard: <a href="https://github.com/owen282000/life-dashboard-companion-app">Android app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-companion-app-ios">iPhone app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-ha">Home Assistant integration</a> &nbsp;·&nbsp; <b>Grafana stack</b> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-sleep-card">Sleep card</a></sub>
+  <sub>Life Dashboard: <a href="https://github.com/owen282000/life-dashboard-companion-app">Android app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-companion-app-ios">iPhone app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-ha">Home Assistant integration</a> &nbsp;·&nbsp; <b>Grafana stack</b> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-sleep-card">Sleep card</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-screen-time-card">Screen time cards</a></sub>
 </p>
 
 <p align="center">
@@ -86,7 +86,7 @@ The phone pushes signed JSON to you. There's no cloud account in between, so the
 
 ## Part of Life Dashboard
 
-Life Dashboard is four projects and a card, and you only install the parts you need. Put the app on each phone, then pick where the data goes. Both apps send the same payload, so an Android phone and an iPhone can share one Home Assistant or one stack.
+Life Dashboard is four projects and two sets of cards, and you only install the parts you need. Put the app on each phone, then pick where the data goes. Both apps send the same payload, so an Android phone and an iPhone can share one Home Assistant or one stack.
 
 On Android, [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme) is the easy way: a one-time purchase, with automatic updates, that supports development. The same app stays free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/), with the same signature. On an iPhone, the app is on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8).
 
@@ -96,6 +96,7 @@ On Android, [Google Play](https://play.google.com/store/apps/details?id=com.owen
   <a href="https://github.com/owen282000/life-dashboard-ha"><img src="docs/family/ha.png" alt="Home Assistant integration: sensors and all your history" width="400"></a>
   <picture><img src="docs/family/stack-here.png" alt="Grafana stack: Postgres and Grafana dashboards (this repository)" width="400"></picture>
   <a href="https://github.com/owen282000/life-dashboard-sleep-card"><img src="docs/family/sleep-card.png" alt="Sleep card: one night, stage by stage" width="400"></a>
+  <a href="https://github.com/owen282000/life-dashboard-screen-time-card"><img src="docs/family/screen-time-card.png" alt="Screen time cards: today, the week and the family" width="400"></a>
 </p>
 
 The data can also go to an MQTT broker or a webhook of your own instead. Both apps have that built in, for n8n, Node-RED or a script.
@@ -120,7 +121,7 @@ You need Docker with Compose, or Podman, and a phone that can reach this machine
    sh install.sh
    ```
 
-2. In the app, tap **Scan a pairing code** and scan the code in your terminal: on Android it's on the **Webhook** card of the **Health** tab, on an iPhone under **Add destination**. Then tap **Sync Now** (on Android, on both tabs) and send the last 90 days, with **Backfill** on Android and with **Send history** under **What to send** on an iPhone.
+2. In the app, tap **Scan a pairing code** and scan the code in your terminal: it's on the **Health** tab, under **Add destination** once you have a destination. Then tap **Sync Now** (on Android, on both tabs) and send the last 90 days with **Send history** under **What to send**.
 3. Open Grafana on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
 
 Something wrong? The same line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).
@@ -197,7 +198,7 @@ A Helm chart runs the same images on a cluster of your own, with Postgres throug
 
 Set `LIFEDASH_VERSION` in `.env` to a newer release, or to `1` to follow every 1.x release, then run `docker compose pull && docker compose up -d`. Coming from a version before 1.0.0, which ran Postgres 16? The database won't start until one script moves your data over: see [Upgrading from a version before 1.0.0](docs/operations.md#upgrading-from-a-version-before-100). A backup is one line: `docker compose exec -T db pg_dump -U lifedash -Fc lifedash > lifedash-$(date +%F).dump`. [Backups](docs/operations.md#backups) covers restoring.
 
-Tested on Docker 29 with Postgres 18.6 and Grafana 13.3.0. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
+Tested on Docker 29 with Postgres 18.6 and Grafana 13.3.1. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 
 ## Exposing it safely
 

@@ -39,7 +39,7 @@ A few conventions hold for every view:
 - Records over a period (steps, workouts) count on the local day they started. Records at one moment count on the local day of that moment.
 - Daily totals use the `date` the phone sent, which is the phone's own local day.
 - A night of sleep belongs to the local date you woke up on.
-- Screen time uses the app's own day, which runs from 04:00 to 04:00 by default (configurable on the phone under **Day Boundary**), so use after midnight counts toward the day before.
+- Screen time uses the app's own day, which runs from 04:00 to 04:00 by default (configurable on the phone under **Day starts at** on the **Screen Time** tab), so use after midnight counts toward the day before.
 
 Avoid `current_date`, `$__timeGroup` for days, and the session time zone: they use the database's UTC, not `TZ`. Use the helper functions below instead.
 

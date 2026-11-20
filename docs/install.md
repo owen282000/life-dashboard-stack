@@ -141,9 +141,9 @@ The installer and the doctor work with Podman as with Docker: they find it by th
 Like the Home Assistant integration, the receiver shows a QR code that the app scans, so you type neither the address nor the secret.
 
 1. Show the code. With `PUBLIC_URL` set, it is in the receiver's log at every start: `docker compose logs receiver`. The log draws it for a dark terminal. Or open `http://<address of this machine>:8080/pair` in a browser on your own network; that page shows the same code, and without `PUBLIC_URL` it uses the address you opened it with.
-2. On Android, open the **Webhook** card on the **Health** tab and tap **Scan a pairing code**. On an iPhone, tap **Add destination** on the **Health** tab, or **Use your own server** while there is no destination yet, and then **Scan a pairing code**. Or point the phone's camera at the code.
+2. In the app, tap **Add destination** on the **Health** tab, and then **Scan a pairing code**. While there is no destination yet, **Scan a pairing code** is right on the tab. Or point the phone's camera at the code.
 3. Check the address the app shows and tap **Pair**. The app sends a test ping, which the receiver answers signed with the secret, so the iPhone app reports the pairing as confirmed (in the words it uses for Home Assistant). On Android, leave **Health** and **Screen Time** both on, so screen time and health data land under one **Phone**, and leave plain HTTP allowed for an `http://` address.
-4. Tap **Sync Now**, on Android on both tabs, and send your older data as in the steps under [Connect a phone by hand](#connect-a-phone-by-hand): **Backfill** on Android, **Send history** on an iPhone.
+4. Tap **Sync Now**, on Android on both tabs, and send your older data with **Send history** under **What to send**, as in the steps under [Connect a phone by hand](#connect-a-phone-by-hand).
 
 The code holds the webhook URL with the label `phone`, the secret and the name Life Dashboard Stack, in the pairing format of the Home Assistant integration. For a second phone, open `/pair?label=<label>` or use the **Another phone** field on the page: every phone needs its own label, see [Several phones](#several-phones). The log and the installer name the page's full address, such as `http://192.168.1.10:8080/pair?label=<label>`; with `PAIRING_PAGE=0` they point to `python pairing.py <label>` in the receiver's container instead. With an empty `WEBHOOK_SECRET` there is no code, because the apps refuse one without a secret; the log and the page suggest a new random one to put in `.env`.
 
@@ -161,15 +161,16 @@ http://<address of this machine>:8080/webhook/<label>
 
 The label is how the dashboards tell phones apart. Plain `/webhook` works too and stores the phone as `default`.
 
-**Android** (Life Dashboard Companion 1.23.0):
+**Android** (Life Dashboard Companion 1.30.0 or newer):
 
-1. On the **Health** tab, open **Webhook**. Add the URL under **Webhook URLs**, and paste the `WEBHOOK_SECRET` value into **HMAC signing secret (optional)**.
-2. Under **Advanced**, switch on **Allow plain HTTP webhooks**. The app refuses `http://` addresses without it.
-3. Tap **Test ping**, then **Save Changes**, then **Sync Now**.
-4. On the **Screen Time** tab, add the same URL, with the same label, and the same secret. That tab has its own URL list and secret. With one label on both tabs, screen time and health data land under one **Phone**, which the screen time tile on the overview and the sleep panel on the Screen time dashboard need. Tap **Save Changes**, then **Sync Now**.
-5. Back on the **Health** tab, tap **Backfill** and pick **90d** to fill the dashboards with the last three months. If the dialog shows **Grant history access**, tap it first: without it Health Connect only hands out the last 30 days. Screen time starts with the last 7 days and grows from there.
+1. On the **Health** tab, tap **More**, then **Advanced**, and switch on **Allow plain HTTP webhooks**. The app refuses `http://` addresses without it.
+2. Back on the **Health** tab, tap **Add destination**, or **Use your own server** while there is no destination yet. Enter the URL under **Webhook URL** and tap **Add webhook**.
+3. On the page that opens, paste the `WEBHOOK_SECRET` value into **HMAC signing secret (optional)** and tap **Save** at the top.
+4. Open the address's row again and tap **Send test**. Then tap **Sync Now** on the tab.
+5. On the **Screen Time** tab, add the same URL, with the same label, and the same secret. That tab has its own list of addresses, each with its own secret. With one label on both tabs, screen time and health data land under one **Phone**, which the screen time tile on the overview and the sleep panel on the Screen time dashboard need. Tap **Sync Now** there too.
+6. Back on the **Health** tab, tap **What to send**, then **Send history**, and pick **90 days** to fill the dashboards with the last three months. If the page shows **Grant history access**, tap it first: without it Health Connect only hands out the last 30 days. Screen time starts with the last 7 days and grows from there.
 
-**iPhone** (Life Dashboard Companion for iOS 1.11.0):
+**iPhone** (Life Dashboard Companion for iOS 1.11.0 or newer):
 
 1. On the **Health** tab, tap **Add destination**, or **Use your own server** while there is no destination yet. Type the URL in the **Webhook URL** field and tap **Add webhook**.
 2. On the sheet that opens, paste the `WEBHOOK_SECRET` value under **HMAC Signing Secret** and tap **Save**.
