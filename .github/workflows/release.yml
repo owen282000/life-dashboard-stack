@@ -70,7 +70,7 @@ jobs:
         include:
           - image: receiver
             title: Life Dashboard receiver
-            description: Takes signed payloads from the Life Dashboard Companion apps and stores them in Postgres
+            description: Takes signed payloads from the Life Dashboard apps and stores them in Postgres
           - image: grafana
             title: Life Dashboard Grafana
             description: Grafana with the six Life Dashboard dashboards and the Postgres data source provisioned

@@ -1,4 +1,4 @@
-"""Pairing: the QR code that the Life Dashboard Companion apps scan.
+"""Pairing: the QR code that the Life Dashboard apps scan.
 
 A pairing code is an https link with everything the phone needs in the fragment, after
 the #, which a browser never sends to a server (RFC 3986, section 3.5):
@@ -244,7 +244,7 @@ def log_block(public_url: str, secret: str, label: str = DEFAULT_LABEL, at_start
         hook = webhook_url(public_url, label)
         link = pairing_url(hook, secret)
         out += [
-            "Scan this code in Life Dashboard Companion (Webhook card, Scan a pairing code),",
+            "Scan this code in the Life Dashboard app (Webhook card, Scan a pairing code),",
             "or with the phone's camera, check the address it shows and tap Pair.",
             "",
             terminal_qr(link),
@@ -345,8 +345,8 @@ def page_html(*, public_url: str, host_header: str | None, secret: str, label: s
     """The /pair page: the code, the link, the steps and what the page gives away."""
     e = escape
     body: list[str] = ["<h1>Pair a phone</h1>",
-                       '<p class="muted">Life Dashboard Stack: scan the code with Life Dashboard '
-                       "Companion, and nobody has to type an address or a secret.</p>"]
+                       '<p class="muted">Life Dashboard Stack: scan the code with the Life Dashboard '
+                       "app, and nobody has to type an address or a secret.</p>"]
 
     chosen = DEFAULT_LABEL if label is None or label == "" else label
     label_ok = bool(LABEL_RE.match(chosen))
@@ -383,7 +383,7 @@ def page_html(*, public_url: str, host_header: str | None, secret: str, label: s
         body.append(svg_qr(link))
         body += [
             '<ol class="steps">',
-            "<li>In Life Dashboard Companion, open the <strong>Webhook</strong> card on the "
+            "<li>In the Life Dashboard app, open the <strong>Webhook</strong> card on the "
             "<strong>Health</strong> tab and tap <strong>Scan a pairing code</strong>. The "
             "phone's camera works too.</li>",
             f"<li>Check that the app shows <code>{e(urlsplit(hook).netloc)}</code> and tap "
