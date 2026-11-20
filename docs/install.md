@@ -24,7 +24,7 @@ A container engine, and a phone that can reach the machine that runs the stack (
 
 Linux and macOS both work; on Windows, run it in WSL2.
 
-On the phone: Life Dashboard Companion for [Android](https://github.com/owen282000/life-dashboard-companion-app) 1.23.0 or the [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios) version 1.6.0. Pairing with a QR code needs 1.16.0 or newer on Android, or 1.4.0 or newer on iPhone.
+On the phone: Life Dashboard for [Android](https://github.com/owen282000/life-dashboard-companion-app) 1.23.0 or Life Dashboard for [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios) 1.6.0. Pairing with a QR code needs 1.16.0 or newer on Android, or 1.4.0 or newer on iPhone.
 
 Get the Android app from [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme), the easy way with automatic updates, or for free from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest), [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/owen282000/life-dashboard-companion-app) or [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/): the same app, with the same signature. The iPhone app is on the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8).
 
@@ -161,7 +161,7 @@ http://<address of this machine>:8080/webhook/<label>
 
 The label is how the dashboards tell phones apart. Plain `/webhook` works too and stores the phone as `default`.
 
-**Android** (Life Dashboard Companion 1.30.0 or newer):
+**Android** (Life Dashboard for Android 1.30.0 or newer):
 
 1. On the **Health** tab, tap **More**, then **Advanced**, and switch on **Allow plain HTTP webhooks**. The app refuses `http://` addresses without it.
 2. Back on the **Health** tab, tap **Add destination**, or **Use your own server** while there is no destination yet. Enter the URL under **Webhook URL** and tap **Add webhook**.
@@ -170,7 +170,7 @@ The label is how the dashboards tell phones apart. Plain `/webhook` works too an
 5. On the **Screen Time** tab, add the same URL, with the same label, and the same secret. That tab has its own list of addresses, each with its own secret. With one label on both tabs, screen time and health data land under one **Phone**, which the screen time tile on the overview and the sleep panel on the Screen time dashboard need. Tap **Sync Now** there too.
 6. Back on the **Health** tab, tap **What to send**, then **Send history**, and pick **90 days** to fill the dashboards with the last three months. If the page shows **Grant history access**, tap it first: without it Health Connect only hands out the last 30 days. Screen time starts with the last 7 days and grows from there.
 
-**iPhone** (Life Dashboard Companion for iOS 1.11.0 or newer):
+**iPhone** (Life Dashboard for iPhone 1.11.0 or newer):
 
 1. On the **Health** tab, tap **Add destination**, or **Use your own server** while there is no destination yet. Type the URL in the **Webhook URL** field and tap **Add webhook**.
 2. On the sheet that opens, paste the `WEBHOOK_SECRET` value under **HMAC Signing Secret** and tap **Save**.

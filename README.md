@@ -6,11 +6,11 @@
 
 <p align="center">
   <b>Your phone's health data and screen time in your own Postgres and Grafana.</b><br>
-  The backend for the Life Dashboard Companion apps: six Grafana dashboards and an MCP server with eight read-only tools for Claude or a local model. Docker Compose or Kubernetes, no cloud.
+  The backend for the Life Dashboard apps: six Grafana dashboards and an MCP server with eight read-only tools for Claude or a local model. Docker Compose or Kubernetes, no cloud.
 </p>
 
 <p align="center">
-  <a href="https://github.com/owen282000/life-dashboard-stack/releases/latest"><img src="https://img.shields.io/github/v/release/owen282000/life-dashboard-stack" alt="Latest release"></a>
+  <a href="https://github.com/owen282000/life-dashboard-stack/releases/latest"><img src="https://img.shields.io/github/v/release/owen282000/life-dashboard-stack?label=Release&color=30b77e" alt="Latest release"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker%20Compose-3%20services-2496ED" alt="Docker Compose with three services"></a>
   <a href="docs/kubernetes.md"><img src="https://img.shields.io/badge/Helm-chart-0F1689" alt="Helm chart for Kubernetes"></a>
   <a href="https://artifacthub.io/packages/search?repo=life-dashboard"><img src="https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/life-dashboard" alt="Artifact Hub"></a>
@@ -36,19 +36,21 @@
   <a href="https://owen282000.com/life-dashboard/grafana/">Website</a>
 </p>
 
+<!-- life-dashboard:nav -->
 <p align="center">
-  <sub>Life Dashboard: <a href="https://github.com/owen282000/life-dashboard-companion-app">Android app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-companion-app-ios">iPhone app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-ha">Home Assistant integration</a> &nbsp;·&nbsp; <b>Grafana stack</b> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-sleep-card">Sleep card</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-screen-time-card">Screen time cards</a></sub>
+  <sub>Life Dashboard: <a href="https://github.com/owen282000/life-dashboard-companion-app">Android app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-companion-app-ios">iPhone app</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-ha">Home Assistant integration</a> &nbsp;·&nbsp; <b>Grafana stack</b> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-sleep-card">Sleep card</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-screen-time-card">Screen time cards</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-year-card">Year card</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-activity-card">Activity card</a> &nbsp;·&nbsp; <a href="https://github.com/owen282000/life-dashboard-before-bed-card">Before bed card</a></sub>
 </p>
+<!-- /life-dashboard:nav -->
 
 <p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/readme-hero-phone.png">
-    <img src="docs/readme-hero.png" alt="The Life Dashboard overview in Grafana with sample data: tiles for steps today, last night's sleep, overnight low heart rate, weight, screen time and the last sync, a table of the last 7 days against the 28 before, steps per day with a goal line, sleep stages per night and an hourly heart rate band" width="900">
+    <img src="docs/readme-hero.png" alt="The Life Dashboard overview in Grafana: tiles for today, a table that compares weeks, and charts for steps, sleep and heart rate" width="900">
   </picture>
-  <br><sub>Sample data</sub>
+  <br><sub>Sample data. Tiles for steps today, last night's sleep, overnight low heart rate, weight, screen time and the last sync, the last 7 days against the 28 before, steps per day with a goal line, sleep stages per night and an hourly heart rate band.</sub>
 </p>
 
-The [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) apps send Health Connect data and screen time per app from an Android phone, or Apple Health from an [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios), to a webhook. This repository is the other end. One command starts a receiver that checks every signature, Postgres with your records in plain SQL, Grafana with six dashboards, and an optional MCP server so the AI you choose can answer questions about your own history.
+The Life Dashboard apps send Health Connect data and screen time per app from an [Android phone](https://github.com/owen282000/life-dashboard-companion-app), or Apple Health from an [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios), to a webhook. This repository is the Grafana stack, the other end. One command starts a receiver that checks every signature, Postgres with your records in plain SQL, Grafana with six dashboards, and an optional MCP server so the AI you choose can answer questions about your own history.
 
 - **Any brand, through the phone.** Whatever writes to Health Connect or Apple Health arrives, from every source at once, with no account and no cloud login per brand.
 - **Android and iPhone in one database**, with screen time per app next to the health data.
@@ -71,9 +73,9 @@ It's for people who want their records in a database they can query, next to Hom
 <p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/readme-screen-time-phone.png">
-    <img src="docs/readme-screen-time.png" alt="The Screen time dashboard with sample data: tiles for today, yesterday, the daily average, the top app, apps used and the last use, minutes per day stacked by app, the top apps, a table per app, minutes per app per day as a heatmap, and how long before sleep the phone was last used" width="900">
+    <img src="docs/readme-screen-time.png" alt="The Screen time dashboard in Grafana: tiles for today and the top app, minutes per day stacked by app, and a heatmap per app" width="900">
   </picture>
-  <br><sub>Sample data. Minutes per app, per day, in a table you own.</sub>
+  <br><sub>Sample data. Minutes per app, per day, in a table you own, with the daily average, the top apps and how long before sleep the phone was last used.</sub>
 </p>
 
 ## How it works
@@ -83,8 +85,9 @@ The phone pushes signed JSON to you. There's no cloud account in between, so the
 <p align="center">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/how-it-works-phone.png">
-    <img src="docs/how-it-works.png" alt="Diagram: the Android app (Health Connect and screen time per app) and the iPhone app (Apple Health) send HMAC-signed JSON to the receiver, a webhook that checks every signature. The receiver writes every record once to Postgres, with the dash views. Grafana reads them as grafana_ro and shows six dashboards. The optional read-only API and the optional MCP server read them as dash_ro, and the MCP server gives the AI model you choose eight read-only tools through any MCP client, with a local model or one in the cloud." width="900">
+    <img src="docs/how-it-works.png" alt="Diagram: the Android and iPhone apps send signed JSON to the receiver, which writes to Postgres; Grafana, the API and the MCP server read from it" width="900">
   </picture>
+  <br><sub>The receiver checks every HMAC signature and writes each record once. Grafana reads the <code>dash</code> views as <code>grafana_ro</code>; the optional API and MCP server read them as <code>dash_ro</code>, and the MCP server gives the model you choose eight read-only tools.</sub>
 </p>
 
 [views.md](docs/views.md) explains how records become days and nights, and [compatibility.md](docs/compatibility.md) lists what stays the same within a major version.
@@ -129,11 +132,16 @@ On Android, [Google Play](https://play.google.com/store/apps/details?id=com.owen
 
 ## Quick start
 
-You need Docker with Compose, or Podman, and a phone that can reach this machine (the same network, or a VPN). With a year of sample data for two phones (235,000 records), the stack used about 450 MB of memory while every dashboard loaded, 520 MB with the MCP server, and 530 MB on disk: 210 MB of data and 320 MB of Postgres write-ahead log. The images are about 650 MB to download, most of it Grafana. Pairing with a QR code needs the Android app 1.16.0 or the iPhone app 1.4.0 or newer.
+What you need:
+
+- **A machine for the stack**: Docker with Compose 2.20 or newer, or Podman 4.7 or newer, on a machine your phone can reach (the same network, or a VPN).
+- **A phone**: Android 9 or newer with Health Connect (Android 8.0 is enough for screen time alone), or an iPhone on iOS 17 or newer. Pairing with a QR code needs the Android app 1.16.0 or the iPhone app 1.4.0 or newer.
+- **Something that fills it**: your watch or fitness app must write to Health Connect or Apple Health. The app sends what is in there.
+- **No Home Assistant**: the app sends straight to the stack. If you run Home Assistant too, the same app can send to both.
 
 <a id="pair-the-app"></a>
 
-1. Run the installer. It puts the release files in `./life-dashboard`, writes `.env` with a random secret and passwords, starts the stack and shows the pairing code:
+1. **Run the installer.** It puts the release files in `./life-dashboard`, writes `.env` with a random secret and passwords, starts the stack and shows the pairing code:
 
    ```bash
    curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh
@@ -147,10 +155,22 @@ You need Docker with Compose, or Podman, and a phone that can reach this machine
    sh install.sh
    ```
 
-2. In the app, tap **Scan a pairing code** and scan the code in your terminal: it's on the **Health** tab, under **Add destination** once you have a destination. Then tap **Sync Now** (on Android, on both tabs) and send the last 90 days with **Send history** under **What to send**.
-3. Open Grafana on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
+2. **Install the app.** It's listed on Google Play and the App Store as Health Data for Home Assistant: [Google Play](https://play.google.com/store/apps/details?id=com.owen282000.lifedashboard&referrer=utm_source%3Dgh-stack-readme%26utm_medium%3Dreadme) for €4.99 (US$4.99) once, the [App Store](https://apps.apple.com/app/apple-store/id6824075761?pt=128699800&ct=gh-stack-readme&mt=8) for €6.99 (US$5.99) once. On Android the APK from [GitHub](https://github.com/owen282000/life-dashboard-companion-app/releases/latest) and [F-Droid](https://f-droid.org/packages/com.owen282000.lifedashboard/) is free, and the iPhone app can be [built from source](https://github.com/owen282000/life-dashboard-companion-app-ios#build-and-install).
+3. **Pick the stack as the destination.** Open the app and, at the setup question about where your data should go, tap **Scan a pairing code**. Scan the code in your terminal and tap **Pair**. Did you already finish the setup, or skip the code with **I will set this up later**? Then the same button is on the **Health** tab: right on the tab while it has no destination, and under **Add destination** once it has one.
+4. **Grant permissions.** On Android, allow Health Connect and, for screen time, usage access. On an iPhone, allow Apple Health access.
+5. **Tap Sync Now**, on Android on both the **Health** and the **Screen Time** tab.
+6. **Send your history.** Under **What to send**, tap **Send history** and pick 90 days to fill the dashboards with the last three months.
+7. **Open Grafana** on port 3000 and log in as `admin` with `GRAFANA_PASSWORD` from `life-dashboard/.env`. The overview is the home page.
 
-Something wrong? The same line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).
+You should now see the overview with today's steps, last night's sleep and the time of the last sync, and your phone in the **Phone** picker at the top. Still empty? These are the usual reasons:
+
+- **The phone can't reach the machine.** Open `http://<address of this machine>:8080/health` in the phone's browser, on the network it syncs from. An iPhone also refuses plain `http://` to a name such as `nas.lan`: use the IP address or `https://`.
+- **Nothing was sent yet.** A data type that is off or has no permission sends nothing, and so does a phone where no watch or fitness app writes to Health Connect or Apple Health. The **Data and sync** dashboard shows what arrived, and from which phone.
+- **Only a few days show.** The first sync sends the last 7 days; the rest comes with **Send history**.
+
+The same installer line with `-s -- doctor` checks the install and says what to fix. The [setup guide](docs/install.md) has the installer's options, the [install by hand](docs/install.md#by-hand), [a NAS or Portainer](docs/install.md#on-a-nas-or-in-portainer), [Podman](docs/install.md#podman), the [pairing code](docs/install.md#pair-the-app), [setting a phone up by hand](docs/install.md#connect-a-phone-by-hand) and [several phones](docs/install.md#several-phones).
+
+**How much room it takes.** With a year of sample data for two phones (235,000 records), the stack used about 450 MB of memory while every dashboard loaded, 520 MB with the MCP server, and 530 MB on disk: 210 MB of data and 320 MB of Postgres write-ahead log. The images are about 650 MB to download, most of it Grafana.
 
 ## Try it without a phone
 
@@ -183,7 +203,7 @@ Days are local days in your time zone, a missing day is a gap rather than a zero
 
 ## Ask your own AI (MCP)
 
-[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The stack's optional MCP server gives the model you choose eight read-only tools on your history: `list_phones`, `data_catalog`, `sync_status`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
+[MCP](https://modelcontextprotocol.io) is the standard way for an AI model to call tools. The Grafana stack's optional MCP server gives the model you choose eight read-only tools on your history: `list_phones`, `data_catalog`, `sync_status`, `daily_summary`, `sleep_nights`, `workouts`, `trend` and `screen_time`. None of them writes or takes SQL, and the server reads as `dash_ro`, a user that can only read the `dash` views.
 
 ```bash
 echo "MCP_TOKEN=$(openssl rand -hex 32)" >> .env
@@ -250,20 +270,30 @@ Series the Android app sends per time window are stored, but only the heart rate
 
 **Project:** [Upgrades, backups and security](docs/operations.md) · [Build from source](docs/operations.md#build-from-source) · [Changelog](CHANGELOG.md) · [Releasing](docs/releasing.md) · [Security policy](SECURITY.md)
 
+<!-- life-dashboard:built -->
+## How this is built
+
+Life Dashboard is a one-person project, and [Claude Code](https://claude.com/claude-code) writes a large part of the code. I decide what gets built, read every change before it is merged, and test it on my own phones and Home Assistant before a release. Automated checks run on every pull request, and the [AI policy](https://github.com/owen282000/life-dashboard-companion-app/blob/main/AI_POLICY.md) explains what the AI does and what I check.
+<!-- /life-dashboard:built -->
+
 <a id="build-from-source"></a>
 
 ## Help and contributing
 
-Found a bug in the stack? Open an [issue](https://github.com/owen282000/life-dashboard-stack/issues) here. Questions about the apps go to the Android app's [Discussions](https://github.com/owen282000/life-dashboard-companion-app/discussions). No GitHub account? Use the [feedback board](https://owen282000.com/life-dashboard/feedback/), which needs no account. Everything on it is public, so leave out health data, logs and webhook URLs.
+Found a bug in the Grafana stack? Open an [issue](https://github.com/owen282000/life-dashboard-stack/issues) here. Questions about the apps go to the Android app's [Discussions](https://github.com/owen282000/life-dashboard-companion-app/discussions). No GitHub account? Use the [feedback board](https://owen282000.com/life-dashboard/feedback/), which needs no account. Everything on it is public, so leave out health data, logs and webhook URLs.
 
 Pull requests are welcome. The receiver and the MCP server are Python, the views SQL, and [Build from source](docs/operations.md#build-from-source) builds the images from a clone and runs the tests.
 
 ## Support the project
 
-Stars, shares and good bug reports all help. This is a one-person project, but your setup doesn't depend on that person: there's no server of mine to switch off, your history lives in your own database, and the code is MIT. If you want to chip in for the evenings that go into it, there's [Ko-fi](https://ko-fi.com/owen282000). The stack stays free and open source either way.
+Stars, shares and good bug reports all help. This is a one-person project, but your setup doesn't depend on that person: there's no server of mine to switch off, your history lives in your own database, and the code is MIT. If you want to chip in for the evenings that go into it, there's [Ko-fi](https://ko-fi.com/owen282000). The Grafana stack stays free and open source either way.
 
 MIT licensed. See [LICENSE](LICENSE).
 
+<!-- life-dashboard:footer -->
 <p align="center">
-  <sub>Made by <a href="https://github.com/owen282000">Owen Vogelaar</a> for the self-hosting and quantified self crowd.</sub>
+  <sub>Made by <a href="https://github.com/owen282000">Owen Vogelaar</a> for the self-hosting and quantified self crowd.</sub><br>
+  <sub>Google Play and the Google Play logo are trademarks of Google LLC.</sub><br>
+  <sub>Apple, the Apple logo and App Store are trademarks of Apple Inc.</sub>
 </p>
+<!-- /life-dashboard:footer -->
