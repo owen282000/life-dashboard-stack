@@ -1,4 +1,4 @@
-"""Webhook receiver for Life Dashboard Companion payloads.
+"""Webhook receiver for Life Dashboard payloads.
 
 POST /webhook/<label> (or /webhook for the label "default") takes one payload from the
 Android or iPhone app. The receiver checks the size and the HMAC signature, writes the

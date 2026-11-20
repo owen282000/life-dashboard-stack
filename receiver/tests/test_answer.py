@@ -23,7 +23,7 @@ SECRET = "s3cret"
 def ios_ping(app_version="1.6.0") -> bytes:
     """TestPing.body in the iOS app: JSONSerialization with sorted keys, no spaces."""
     return json.dumps({
-        "app_version": app_version, "message": "Test ping from Life Dashboard Companion",
+        "app_version": app_version, "message": "Test ping from Life Dashboard",
         "source": "healthkit_ios", "test": True, "timestamp": "2026-10-17T09:30:00Z",
     }, sort_keys=True, separators=(",", ":")).encode()
 
@@ -31,7 +31,7 @@ def ios_ping(app_version="1.6.0") -> bytes:
 def android_ping() -> bytes:
     """TestPing.payload in the Android app, as kotlinx.serialization writes it."""
     return json.dumps({
-        "test": True, "message": "Test ping from Life Dashboard Companion",
+        "test": True, "message": "Test ping from Life Dashboard",
         "timestamp": "2026-10-17T09:30:00.123456Z", "app_version": "1.23.0", "source": "health_connect",
     }, separators=(",", ":")).encode()
 

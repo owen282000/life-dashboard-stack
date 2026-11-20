@@ -70,7 +70,7 @@ def test_body_over_32_mb_is_refused_before_reading(http_server, db):
 
 def test_ping_writes_only_a_ledger_row(http_server, db):
     base = http_server("s3cret")
-    ping = {"test": True, "message": "Test ping from Life Dashboard Companion",
+    ping = {"test": True, "message": "Test ping from Life Dashboard",
             "timestamp": "2026-10-04T12:00:00Z", "app_version": "1.23.0", "source": "health_connect"}
     status, body = send(base, "/webhook/phone", json.dumps(ping).encode(), secret="s3cret")
     assert status == 200 and body.get("ping") is True

@@ -758,7 +758,7 @@ summary() {
     fi
     say ""
     say "Next:"
-    say "  1. In Life Dashboard Companion, open the Webhook card, tap Scan a pairing code and scan"
+    say "  1. In the Life Dashboard app, open the Webhook card, tap Scan a pairing code and scan"
     say "     the code above. Then Sync Now and Backfill."
     if [ -n "$page" ]; then
         say "  2. Another phone gets its own label: open $page?label=<label>"

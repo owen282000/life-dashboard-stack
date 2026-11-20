@@ -4,6 +4,10 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+### Changed
+
+- The pairing page, the pairing code in the terminal and `install.sh` call the app Life Dashboard, the name the apps now use themselves. The README gives the store prices.
+
 ## [1.2.3] - 2026-11-20
 
 ### Fixed

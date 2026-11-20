@@ -355,7 +355,7 @@ def screen_payloads(person, first_day, seq):
 # ------------------------------------------------------------------ main
 
 def ping(source, app_version):
-    return {"test": True, "message": "Test ping from Life Dashboard Companion", "timestamp": iso(NOW),
+    return {"test": True, "message": "Test ping from Life Dashboard", "timestamp": iso(NOW),
             "app_version": app_version, "source": source}
 
 
