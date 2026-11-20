@@ -15,16 +15,26 @@ How to keep a Docker Compose install up to date, find what's wrong with it, back
 
 ## Upgrading
 
-The `docker-compose.yml` of a release starts the images of that release. To move to a newer one, set `LIFEDASH_VERSION` in `.env` to its number from the [releases](https://github.com/owen282000/life-dashboard-stack/releases), then:
+**Installed with the [one-line installer](install.md#with-one-line)?** Run the line again with `--upgrade`. `--dir` is your install folder; leave it out when you run the line in that folder, or when it's the default `./life-dashboard`.
+
+```bash
+curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh -s -- --upgrade --dir ~/life-dashboard
+```
+
+What it changes and what it leaves alone:
+
+- `.env` stays exactly as it is: the secret, the passwords, the ports and the tokens. It names settings the new version has that your `.env` doesn't; they all have defaults, so there's nothing you have to add.
+- `docker-compose.yml` becomes the new release's. The old one stays next to it as `docker-compose.yml.<old version>.bak`.
+- A `docker-compose.override.yml` is yours: the installer leaves it alone and Compose keeps using it. That's the place for changes of your own.
+- The images are pulled and the stack restarts. The data and Grafana's volume, with any dashboard you saved as your own copy, stay.
+- It refuses to move to an older version, and warns when `LIFEDASH_VERSION` in `.env` pins other images than the release's.
+
+Then `sh install.sh doctor --dir ~/life-dashboard` checks the result.
+
+**Running Docker Compose by hand?** The `docker-compose.yml` of a release starts the images of that release. To move to a newer one, set `LIFEDASH_VERSION` in `.env` to its number from the [releases](https://github.com/owen282000/life-dashboard-stack/releases), then:
 
 ```bash
 docker compose pull && docker compose up -d
-```
-
-Installed with the [one-line installer](install.md#with-one-line)? Run the line of the new release with `--upgrade` in the install folder instead: it fetches that release's `docker-compose.yml`, keeps `.env`, pulls and restarts.
-
-```bash
-curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh -s -- --upgrade
 ```
 
 To follow every 1.x release, set `LIFEDASH_VERSION=1` once; from then on those two commands are the whole upgrade. A 1.x release never breaks what you built on the stack, see [compatibility.md](compatibility.md), and the [changelog](../CHANGELOG.md) says what's new. When a release adds something to `docker-compose.yml` itself, its notes say so; download that file again then, and keep your `.env`. If you run the MCP server, keep `--profile mcp` on both commands, or set `COMPOSE_PROFILES=mcp` in `.env`, as [mcp.md](mcp.md#start-the-server) explains.

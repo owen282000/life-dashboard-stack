@@ -4,6 +4,18 @@ Every release of the Life Dashboard Stack and what changed in it. The format fol
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-20
+
+### Fixed
+
+- `install.sh` no longer stalls on a `COMPOSE_FILE` in the shell it runs from, say one left from working in a clone of this repository, which made Compose look for `docker-compose.build.yml` in the install folder. It leaves that setting out and says so; a `COMPOSE_FILE` in the install folder's `.env` still counts.
+- When `up` fails, `install.sh` only says a port is in use when Compose said so. Otherwise it points at Compose's own output instead.
+- In the overview dashboard the Days column of "Last 7 days vs the 28 before" is wide enough for `7/7, 28/28`.
+
+### Changed
+
+- How to upgrade is clearer: the README and [docs/operations.md](docs/operations.md#upgrading) start with the installer's `--upgrade` line and say what it keeps, and every release's notes now end with an Upgrade part next to Install.
+
 ## [1.2.2] - 2026-11-20
 
 ### Changed
@@ -124,7 +136,8 @@ Everything the stack did before it had version numbers, now part of 1.0.0:
 - A day's totals and screen time replace the older figure for that day instead of adding a row.
 - The pinned versions of Postgres, Grafana, Python and the receiver's packages are kept current by Dependabot, and CI runs the receiver's tests against a real Postgres.
 
-[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.2...HEAD
+[Unreleased]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.3...HEAD
+[1.2.3]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.2...1.2.3
 [1.2.2]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/owen282000/life-dashboard-stack/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/owen282000/life-dashboard-stack/compare/1.1.2...1.2.0

@@ -9,8 +9,8 @@ type: application
 # One version for the whole stack: the chart, the four images it runs and docker-compose.yml
 # all carry the release version. scripts/prepare-release.sh sets these two lines and the
 # images in artifacthub.io/images below, and a release tag must equal them.
-version: 1.2.2
-appVersion: "1.2.2"
+version: 1.2.3
+appVersion: "1.2.3"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/owen282000/life-dashboard-stack
 sources:
@@ -33,26 +33,28 @@ maintainers:
 annotations:
   artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/changes: |
+    - kind: fixed
+      description: "`install.sh` no longer stalls on a `COMPOSE_FILE` in the shell it runs from, say one left from working in a clone of this repository, which made Compose look for `docker-compose.build.yml` in the install folder. It leaves that setting out and says so; a `COMPOSE_FILE` in the install folder's `.env` still counts."
+    - kind: fixed
+      description: "When `up` fails, `install.sh` only says a port is in use when Compose said so. Otherwise it points at Compose's own output instead."
+    - kind: fixed
+      description: "In the overview dashboard the Days column of \"Last 7 days vs the 28 before\" is wide enough for `7/7, 28/28`."
     - kind: changed
-      description: "The receiver and the MCP server run on Python 3.15.0."
-    - kind: changed
-      description: "psycopg 3.3.8 in the receiver and the MCP server."
-    - kind: changed
-      description: "Grafana 13.3.1."
+      description: "How to upgrade is clearer: the README and docs/operations.md start with the installer's `--upgrade` line and say what it keeps, and every release's notes now end with an Upgrade part next to Install."
   artifacthub.io/license: MIT
   artifacthub.io/category: monitoring-logging
   artifacthub.io/images: |
     - name: receiver
-      image: ghcr.io/owen282000/life-dashboard-receiver:1.2.2
+      image: ghcr.io/owen282000/life-dashboard-receiver:1.2.3
       platforms: [linux/amd64, linux/arm64]
     - name: grafana
-      image: ghcr.io/owen282000/life-dashboard-grafana:1.2.2
+      image: ghcr.io/owen282000/life-dashboard-grafana:1.2.3
       platforms: [linux/amd64, linux/arm64]
     - name: db
-      image: ghcr.io/owen282000/life-dashboard-db:1.2.2
+      image: ghcr.io/owen282000/life-dashboard-db:1.2.3
       platforms: [linux/amd64, linux/arm64]
     - name: mcp
-      image: ghcr.io/owen282000/life-dashboard-mcp:1.2.2
+      image: ghcr.io/owen282000/life-dashboard-mcp:1.2.3
       platforms: [linux/amd64, linux/arm64]
   artifacthub.io/links: |
     - name: Android app

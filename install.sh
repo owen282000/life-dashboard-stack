@@ -26,7 +26,7 @@ set -eu
 
 # The release this script belongs to. scripts/prepare-release.sh sets it, and
 # .github/scripts/check-release.sh refuses a tag it doesn't match.
-VERSION=1.2.2
+VERSION=1.2.3
 REPO=https://github.com/owen282000/life-dashboard-stack
 # Where the release files come from; LIFEDASH_DOWNLOAD points at a mirror or a test folder.
 DOWNLOAD=${LIFEDASH_DOWNLOAD:-$REPO/releases/download/$VERSION}
@@ -152,6 +152,14 @@ if ! printf '%s\n' "$LABEL" | grep -Eq '^[a-z0-9_-]{1,32}$'; then
 fi
 [ -z "$OUTPUT" ] || [ "$ENV_ONLY" = 1 ] || die 2 "--output goes with --env-only"
 [ "$ENV_ONLY" = 0 ] || [ "$COMMAND" = install ] || die 2 "--env-only goes without doctor"
+
+# A COMPOSE_FILE from the shell, say one left from working in a clone of this repository, makes
+# Compose look for other files in the install folder, and the stack never starts. The stack is
+# the docker-compose.yml in that folder; a COMPOSE_FILE in the folder's .env still counts.
+if [ -n "${COMPOSE_FILE:-}" ]; then
+    warn "leaving out COMPOSE_FILE=$COMPOSE_FILE from your shell; the stack runs from docker-compose.yml in its folder"
+    unset COMPOSE_FILE
+fi
 
 # ------------------------------------------------------------------ small helpers
 
@@ -696,8 +704,17 @@ start_stack() {
         dc pull || die 1 "pulling the images failed. Check the network, or run with --no-pull to use the images on this machine"
     fi
     step "Starting the stack"
-    if ! dc up -d; then
-        die 1 "$COMPOSE_TEXT up failed. If a port is in use, set RECEIVER_PORT or GRAFANA_PORT in $DIR/.env and run this again"
+    # The output goes to the screen as it comes, and to a file to tell a taken port from the rest.
+    # set -e would end the left side of the pipe at a failing up, so its code is caught with ||.
+    up_log=$(mktemp "${TMPDIR:-/tmp}/lifedash-up.XXXXXX")
+    { rc=0; dc up -d 2>&1 || rc=$?; echo "$rc" >"$up_log.rc"; } | tee "$up_log"
+    rc=$(cat "$up_log.rc" 2>/dev/null || echo 1)
+    port=0
+    grep -Eqi 'port is already allocated|address already in use|bind: .*in use' "$up_log" && port=1
+    rm -f "$up_log" "$up_log.rc"
+    if [ "$rc" != 0 ]; then
+        [ "$port" = 0 ] || die 1 "$COMPOSE_TEXT up failed: a port is in use. Set RECEIVER_PORT or GRAFANA_PORT (MCP_PORT for the MCP server) in $DIR/.env and run this again"
+        die 1 "$COMPOSE_TEXT up failed; the reason is in its output above"
     fi
     wait_ready || exit 4
 }

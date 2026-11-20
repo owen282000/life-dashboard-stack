@@ -195,7 +195,15 @@ A Helm chart runs the same images on a cluster of your own, with Postgres throug
 
 ## Upgrading
 
-Set `LIFEDASH_VERSION` in `.env` to a newer release, or to `1` to follow every 1.x release, then run `docker compose pull && docker compose up -d`. Coming from a version before 1.0.0, which ran Postgres 16? The database won't start until one script moves your data over: see [Upgrading from a version before 1.0.0](docs/operations.md#upgrading-from-a-version-before-100). A backup is one line: `docker compose exec -T db pg_dump -U lifedash -Fc lifedash > lifedash-$(date +%F).dump`. [Backups](docs/operations.md#backups) covers restoring.
+Installed with the one-line installer? Run the same line with `--upgrade`, pointed at your install folder:
+
+```bash
+curl -fsSL https://github.com/owen282000/life-dashboard-stack/releases/latest/download/install.sh | sh -s -- --upgrade --dir ~/life-dashboard
+```
+
+It keeps your `.env` (the secret, the passwords, the ports and the tokens), saves the old `docker-compose.yml` as `docker-compose.yml.<old version>.bak` next to the new one, leaves a `docker-compose.override.yml` alone, pulls the images and restarts. Your data and your own Grafana dashboards stay. It never goes back to an older version. Run `sh install.sh doctor --dir ~/life-dashboard` afterwards to check it.
+
+Running Docker Compose by hand? Set `LIFEDASH_VERSION` in `.env` to a newer release, or to `1` to follow every 1.x release, then run `docker compose pull && docker compose up -d`. Changes of your own go in `docker-compose.override.yml`, never in `docker-compose.yml`, so an upgrade can't undo them. [Upgrading](docs/operations.md#upgrading) has the details. Coming from a version before 1.0.0, which ran Postgres 16? The database won't start until one script moves your data over: see [Upgrading from a version before 1.0.0](docs/operations.md#upgrading-from-a-version-before-100). A backup is one line: `docker compose exec -T db pg_dump -U lifedash -Fc lifedash > lifedash-$(date +%F).dump`. [Backups](docs/operations.md#backups) covers restoring.
 
 Tested on Docker 29 with Postgres 18.6 and Grafana 13.3.0. Versions are pinned in the images, Dependabot proposes updates, and each release publishes them as new images.
 
