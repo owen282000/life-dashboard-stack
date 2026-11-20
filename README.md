@@ -50,6 +50,11 @@
 
 The [Life Dashboard Companion](https://github.com/owen282000/life-dashboard-companion-app) apps send Health Connect data and screen time per app from an Android phone, or Apple Health from an [iPhone](https://github.com/owen282000/life-dashboard-companion-app-ios), to a webhook. This repository is the other end. One command starts a receiver that checks every signature, Postgres with your records in plain SQL, Grafana with six dashboards, and an optional MCP server so the AI you choose can answer questions about your own history.
 
+- **Any brand, through the phone.** Whatever writes to Health Connect or Apple Health arrives, from every source at once, with no account and no cloud login per brand.
+- **Android and iPhone in one database**, with screen time per app next to the health data.
+- **Edits and deletions arrive too**, not only new records, so the database stays in step with the phone.
+- **Stable within a major version.** The tables, views, API and MCP tools you build on stay as they are; [compatibility.md](docs/compatibility.md) lists them.
+
 It's for people who want their records in a database they can query, next to Home Assistant or instead of it. With a local model nothing leaves your machine. It's a one-person project offered as-is and built to be changed: the views, the dashboards and the receiver are yours to adapt.
 
 ## What you get
