@@ -1,2 +1,2 @@
 mcp==2.3.0
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
